@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Series - Anime Universe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        action: {
+                            DEFAULT: '#dc2626', // True Combat Red
+                            dark: '#991b1b'     // Deep Blood Red
+                        },
+                    },
+                    animation: {
+                        'slow-zoom': 'zoom 20s infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        zoom: {
+                            '0%': { transform: 'scale(1)' },
+                            '100%': { transform: 'scale(1.1)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --primary: #dc2626;
+            --bg-dark: #050505;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            color: #f1f1f1;
+            overflow-x: hidden;
+            min-height: 100vh;
+            cursor: default; 
+        }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+
+        /* --- ACTION THEME UTILITIES --- */
+        .action-skew {
+            transform: skew(-10deg);
+            transition: all 0.3s ease;
+        }
+        .action-skew:hover {
+            transform: skew(-10deg) scale(1.05);
+            box-shadow: -4px 4px 0px var(--primary);
+        }
+        .action-skew:active, .card:active, button:active, a:active {
+            transform: scale(0.98) skew(-10deg);
+            filter: brightness(0.9);
+        }
+
+        /* --- 3D TILT CARD STYLES --- */
+        .card {
+            transition: transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(20, 20, 20, 0.6);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px -10px rgba(220, 38, 38, 0.3);
+            z-index: 10;
+        }
+        .card-img-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.9; pointer-events: none;
+        }
+        .card-content {
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem;
+            transform: translateY(20px) translateZ(20px); opacity: 0;
+            transition: all 0.3s ease-in-out; pointer-events: none;
+        }
+        .card:hover .card-content { transform: translateY(0) translateZ(20px); opacity: 1; }
+        .card-title {
+            position: absolute; bottom: 1.5rem; left: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-shadow: 0 4px 10px rgba(0,0,0,1); font-style: italic; transform: translateZ(30px);
+        }
+        .card:hover .card-title {
+            bottom: 140px; transform: scale(0.9) translateZ(30px);
+            transform-origin: left bottom; color: var(--primary);
+        }
+
+        /* --- SCROLL REVEAL UTILITIES --- */
+        .reveal-on-scroll { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); }
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+        .stagger-1 { transition-delay: 100ms; }
+        .stagger-2 { transition-delay: 200ms; }
+        .stagger-3 { transition-delay: 300ms; }
+
+        /* --- PARTICLES --- */
+        canvas#hero-particles {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+        }
+
+        /* --- MODAL --- */
+        #login-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(5px);
+            z-index: 10000; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        #login-modal.active { display: flex; opacity: 1; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white selection:bg-action selection:text-white antialiased">
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playBeep(type = 'click') {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1000, now); 
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'hover') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(2000, now);
+                osc.frequency.exponentialRampToValueAtTime(1500, now + 0.05);
+                gain.gain.setValueAtTime(0.05, now); 
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('button, a, .card, .action-skew').forEach(el => {
+                el.addEventListener('click', () => playBeep('click'));
+                el.addEventListener('mouseenter', () => playBeep('hover'));
+            });
+        });
+    </script>
+
+    <div id="login-modal">
+        <div class="bg-black border border-action p-10 max-w-sm w-full text-center shadow-[0_0_50px_rgba(220,38,38,0.2)] relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-action"></div>
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-action transition hover:rotate-90 duration-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="w-16 h-16 bg-action/10 flex items-center justify-center mx-auto mb-6 border border-action/50 action-skew">
+                <i class="fas fa-lock text-action text-2xl transform skew-x-10"></i>
+            </div>
+            <h3 class="text-3xl font-bebas tracking-widest mb-4 text-white italic">ACCESS RESTRICTED</h3>
+            <p class="text-gray-500 text-xs mb-8 uppercase tracking-widest">Authentication required for battlefield comms.</p>
+            <div class="flex flex-col gap-4">
+                <a href="login.html" class="bg-action text-white font-black py-3 action-skew text-sm uppercase tracking-wider hover:bg-white hover:text-black transition">Sign In</a>
+                <a href="signup.html" class="bg-transparent text-white font-bold py-3 action-skew text-sm uppercase tracking-wider border border-white/20 hover:border-action transition">Create Account</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-white/10 bg-black/90 backdrop-blur-md" id="main-header">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">ANIME <span class="text-action">UNIVERSE</span></a>
+            
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="index.html" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Home</a>
+                <a href="#featured" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Featured</a>
+                <a href="#list" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Database</a>
+                <a href="#comms" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Comms</a>
+            </nav>
+
+            <div id="auth-buttons" class="flex items-center space-x-4">
+                <a id="login-btn" href="login.html" class="text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition">Login</a>
+                <a id="signup-btn" href="signup.html" class="bg-action text-white font-black py-2 px-6 action-skew text-xs uppercase tracking-widest hover:bg-white hover:text-black transition duration-300">Join</a>
+                <a id="profile-btn" href="dashboard.html" class="bg-white/10 text-white font-bold py-2 px-4 action-skew text-xs uppercase tracking-wider hover:bg-action transition hidden"><i class="fas fa-user-circle mr-2 transform skew-x-10"></i>Profile</a>
+                <a id="logout-btn" href="#" class="text-red-600 hover:text-red-400 font-bold text-xs uppercase tracking-wider hidden">Logout</a>
+            </div>
+            <button class="md:hidden text-white hover:text-action transition"><i class="fas fa-bars text-2xl"></i></button>
+        </div>
+    </header>
+
+    <section class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden text-center bg-black">
+        <div class="absolute inset-0 bg-[url('https://images.alphacoders.com/605/605592.jpg')] bg-cover bg-fixed bg-center opacity-40 animate-slow-zoom"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/60 to-black/80"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(220,38,38,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.02)_1px,transparent_1px)] bg-[size:100px_100px]"></div>
+        
+        <canvas id="hero-particles"></canvas>
+        
+        <div class="relative z-20 px-4">
+            <span class="block text-action font-bold tracking-[0.5em] uppercase text-sm mb-4 animate-pulse">Battlefield Discovered</span>
+            <h1 class="reveal-on-scroll text-7xl md:text-9xl font-bebas text-white uppercase italic">Action <span class="text-action">Realms</span></h1>
+            <div class="mt-8 flex justify-center gap-4 reveal-on-scroll stagger-1">
+                <div class="h-1 w-20 bg-action"></div>
+                <div class="h-1 w-4 bg-action"></div>
+                <div class="h-1 w-1 bg-action"></div>
+            </div>
+        </div>
+    </section>
+
+    <main class="py-16 container mx-auto px-6 max-w-7xl relative z-10">
+        
+        <section class="reveal-on-scroll mb-24 relative">
+            <h2 class="text-5xl font-bebas tracking-widest text-white mb-2 italic">About the <span class="text-action">Genre</span></h2>
+            <div class="h-0.5 w-full bg-gradient-to-r from-action to-transparent mb-8"></div>
+            <p class="text-gray-400 text-xl leading-relaxed font-light italic border-l-4 border-action pl-6">
+                The Action genre in anime is defined by high-stakes conflict, intense physical movement, and breathtaking spectacles. From the "Will of Fire" to supernatural dominance, these stories explore the limits of human (and inhuman) strength.
+            </p>
+        </section>
+
+        <section id="featured" class="reveal-on-scroll mb-24">
+            <h2 class="text-4xl font-bebas tracking-widest text-white mb-2">High-Voltage <span class="text-action">Series</span></h2>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-8">Current Combat Leaders</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('Attack on Titan')">
+                    <img src="aotp.jpg" alt="AOT" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Attack On Titan</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">Humanity's last stand against the Titans.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Deploy</span>
+                    </div>
+                </div>
+
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('Solo Leveling')">
+                    <img src="slpp.jpg" alt="Solo Leveling" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Solo Leveling</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">The weakest hunter surpasses all limits.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Deploy</span>
+                    </div>
+                </div>
+
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('Jujutsu Kaisen')">
+                    <img src="JJK.jpg" alt="JJK" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Jujutsu Kaisen</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">Curses, sorcerers, and the King of Curses.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Deploy</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="list" class="reveal-on-scroll mb-24">
+            <div class="flex items-end gap-4 mb-8">
+                <h2 class="text-4xl font-bebas tracking-widest text-white">Reinforcements <span class="text-action">Incoming</span></h2>
+                <div class="flex-1 h-px bg-white/10 mb-2"></div>
+            </div>
+            <div id="top-50-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </section>
+
+        <section id="comms" class="reveal-on-scroll">
+            <h2 class="text-4xl font-bebas tracking-widest text-white mb-8 italic">War <span class="text-action">Council</span></h2>
+            <div class="bg-black/40 border border-white/10 p-8 relative">
+                <div class="absolute top-0 right-0 p-2 text-[10px] text-action font-bold tracking-widest bg-white/5 border-l border-b border-white/10">SECURE CHANNEL</div>
+                <form id="comment-form" class="space-y-4">
+                    <textarea id="comment-text" placeholder="Intelligence report or fan theories..." class="w-full bg-black border border-white/10 p-4 text-sm text-white focus:outline-none focus:border-action h-32 font-mono"></textarea>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-action text-white font-black px-10 py-3 action-skew uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-black transition">Broadcast</button>
+                    </div>
+                </form>
+                <div id="comment-list" class="mt-10 space-y-4"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="space-y-6">
+                    <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+                    <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="index.html" class="hover:text-action transition-colors">Home Base</a></li>
+                        <li><a href="#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                        <li><a href="#list" class="hover:text-action transition-colors">Database</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                    <form class="relative mt-4">
+                        <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                        <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                <p>&copy; 2026 Anime Universe.</p>
+                <div class="flex space-x-6">
+                    <span>System Status: <span class="text-action">Operational</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            /* AUTH LOGIC */
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (isLoggedIn) {
+                document.getElementById('login-btn')?.classList.add('hidden');
+                document.getElementById('signup-btn')?.classList.add('hidden');
+                document.getElementById('profile-btn')?.classList.remove('hidden');
+                document.getElementById('logout-btn')?.classList.remove('hidden');
+            }
+
+            document.getElementById('logout-btn')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                localStorage.setItem('isLoggedIn', 'false');
+                window.location.reload(); 
+            });
+
+            /* LOGIN MODAL */
+            window.closeModal = function() {
+                const modal = document.getElementById('login-modal');
+                modal.classList.remove('active');
+                setTimeout(() => { modal.style.display = 'none'; }, 300);
+            };
+
+            /* POPULATE LIST */
+            const top50Anime = [
+                "Fullmetal Alchemist: B", "One Piece", "Hunter x Hunter", "Bleach", "Dragon Ball Z",
+                "Code Geass", "One Punch Man", "Vinland Saga", "Cowboy Bebop", "Berserk",
+                "My Hero Academia", "Chainsaw Man", "Fate/Zero", "Mob Psycho 100", "Tokyo Ghoul",
+                "Akame ga Kill!", "Black Clover", "Gurren Lagann", "Sword Art Online", "Hellsing Ultimate"
+            ];
+
+            const listContainer = document.getElementById('top-50-list');
+            top50Anime.forEach((name, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-white/5 p-4 flex justify-between items-center border border-white/5 hover:border-action transition group action-skew cursor-pointer";
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="text-action font-bebas text-xl opacity-50">${(index + 1).toString().padStart(2, '0')}</span>
+                        <h3 class="text-xs font-bold text-gray-300 group-hover:text-white transition uppercase tracking-wider">${name}</h3>
+                    </div>
+                    <button onclick="addToWatchlist('${name}')" class="text-[9px] font-black text-gray-600 hover:text-white transition uppercase tracking-widest"><i class="fas fa-plus"></i> ADD</button>
+                `;
+                // Add sound to dynamic elements
+                div.addEventListener('mouseenter', () => playBeep('hover'));
+                div.addEventListener('click', (e) => { if(e.target.tagName !== 'BUTTON') playBeep('click'); });
+                listContainer.appendChild(div);
+            });
+
+            /* COMMENT LOGIC */
+            const commentForm = document.getElementById('comment-form');
+            const commentList = document.getElementById('comment-list');
+
+            commentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!isLoggedIn) {
+                    const modal = document.getElementById('login-modal');
+                    modal.style.display = 'flex';
+                    setTimeout(() => modal.classList.add('active'), 10);
+                    return;
+                }
+                
+                const text = document.getElementById('comment-text').value.trim();
+                if (!text) return;
+
+                const newComment = document.createElement('div');
+                newComment.className = "bg-white/5 p-4 border-l-2 border-action animate-slide-in";
+                newComment.innerHTML = `<p class="text-action font-bold text-[10px] uppercase mb-1 tracking-widest">Operative</p><p class="text-xs text-gray-400 font-mono">"${text}"</p>`;
+                
+                commentList.prepend(newComment);
+                document.getElementById('comment-text').value = "";
+                playBeep('click');
+            });
+
+            /* --- UPDATED ADD TO WATCHLIST FUNCTION --- */
+            window.addToWatchlist = (name) => {
+                if (!isLoggedIn) {
+                    const modal = document.getElementById('login-modal');
+                    modal.style.display = 'flex';
+                    setTimeout(() => modal.classList.add('active'), 10);
+                    return;
+                }
+                
+                // Get existing logs
+                let logs = JSON.parse(localStorage.getItem('missionLogs') || "[]");
+                
+                // Check if already exists
+                if (logs.some(log => log.title === name)) {
+                    alert("TARGET ALREADY IN LOGS.");
+                    return;
+                }
+
+                // Add to missionLogs matching the missions.html structure
+                logs.push({
+                    id: Date.now(),
+                    title: name,
+                    ep: 1,         // Default start at ep 1
+                    season: 1,     // Default start at season 1
+                    status: 'Watching'
+                });
+
+                localStorage.setItem('missionLogs', JSON.stringify(logs));
+                
+                // Redirect to missions page
+                window.location.href = 'missions.html';
+            };
+
+            /* 3D TILT EFFECT */
+            const tiltCards = document.querySelectorAll('.tilt-card');
+            tiltCards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = ((y - centerY) / centerY) * -10; 
+                    const rotateY = ((x - centerX) / centerX) * 10;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                });
+            });
+
+            /* SCROLL REVEAL */
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('is-visible'); });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+
+            /* HEADER SCROLL */
+            const header = document.getElementById('main-header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('py-2');
+                    header.classList.remove('py-4');
+                } else {
+                    header.classList.add('py-4');
+                    header.classList.remove('py-2');
+                }
+            });
+
+            /* HERO PARTICLES (UPDATED TO RED) */
+            const canvas = document.getElementById('hero-particles');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+            window.addEventListener('resize', resize); resize();
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2 + 0.5; 
+                    this.speedY = Math.random() * 1.5 + 0.2; 
+                    // UPDATED PARTICLE COLOR TO RED
+                    this.color = `rgba(220, 38, 38, ${Math.random() * 0.6 + 0.1})`;
+                }
+                update() {
+                    this.y -= this.speedY; 
+                    if (this.y < 0) { this.y = canvas.height; this.x = Math.random() * canvas.width; }
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+                    ctx.fill(); ctx.shadowBlur = 0;
+                }
+            }
+            for (let i = 0; i < 100; i++) particles.push(new Particle());
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        });
+    </script>
+</body>
+</html>

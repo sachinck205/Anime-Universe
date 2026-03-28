@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Training Grounds</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="anime-db.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        action: { DEFAULT: '#ff4d00', dark: '#cc3d00' }
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'pulse-fast': 'pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --primary: #ff4d00; --bg-dark: #050505; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                linear-gradient(rgba(255, 77, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 77, 0, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            color: #f1f1f1;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+
+        /* --- UI ELEMENTS --- */
+        .action-skew { transform: skew(-10deg); transition: all 0.3s ease; }
+        .action-skew:hover { transform: skew(-10deg) scale(1.05); box-shadow: -4px 4px 0px var(--primary); }
+        .action-skew:active { transform: scale(0.98) skew(-10deg); filter: brightness(0.9); }
+
+        .tech-card {
+            background: rgba(15, 15, 15, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .tech-card:hover { border-color: var(--primary); box-shadow: 0 0 30px -10px rgba(255, 77, 0, 0.3); }
+        
+        .game-screen {
+            background: black;
+            border: 2px solid #333;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        /* GLITCH TEXT EFFECT */
+        .glitch { position: relative; }
+        .glitch::before, .glitch::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        .glitch::before { left: 2px; text-shadow: -1px 0 red; clip: rect(44px, 450px, 56px, 0); animation: glitch 5s infinite linear alternate-reverse; }
+        .glitch::after { left: -2px; text-shadow: -1px 0 blue; clip: rect(44px, 450px, 56px, 0); animation: glitch 5s infinite linear alternate-reverse; }
+        
+        @keyframes glitch {
+            0% { clip: rect(38px, 9999px, 34px, 0); }
+            5% { clip: rect(68px, 9999px, 1px, 0); }
+            10% { clip: rect(96px, 9999px, 98px, 0); }
+            100% { clip: rect(12px, 9999px, 94px, 0); }
+        }
+
+        /* --- SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: var(--primary); }
+    </style>
+</head>
+<body class="bg-[#050505] text-white selection:bg-action selection:text-white antialiased">
+
+    <div id="notification-area" class="fixed top-24 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(type = 'click') {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(1000, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.15); gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15); osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'hover') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(2000, now); osc.frequency.exponentialRampToValueAtTime(1500, now + 0.05); gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05); osc.start(now); osc.stop(now + 0.05);
+            } else if (type === 'win') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.1); gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.3); osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(100, now + 0.3); gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.3); osc.start(now); osc.stop(now + 0.3);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('button, a, .tech-card').forEach(el => {
+                el.addEventListener('click', () => playBeep('click'));
+                el.addEventListener('mouseenter', () => playBeep('hover'));
+            });
+        });
+
+        // NOTIFICATION SYSTEM
+        function showNotification(msg, type='success') {
+            const container = document.getElementById('notification-area');
+            const toast = document.createElement('div');
+            const color = type === 'success' ? 'border-action' : 'border-red-500';
+            toast.className = `bg-black/90 border border-l-4 ${color} text-white p-4 text-xs font-mono shadow-2xl flex items-center gap-3 transform translate-x-full transition-transform duration-300 pointer-events-auto`;
+            toast.innerHTML = `<i class="fas fa-info-circle text-white"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full'));
+            setTimeout(() => { toast.classList.add('translate-x-full'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+    </script>
+
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-white/10 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="index.html" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition">Home</a>
+                <a href="dashboard.html" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition">Dashboard</a>
+                <span class="text-xs font-bold uppercase tracking-[0.2em] text-action border-b-2 border-action pb-1">Roulette & Ops</span>
+            </nav>
+            <div id="auth-buttons" class="flex items-center space-x-4">
+                <a href="dashboard.html" class="bg-white/10 text-white font-bold py-2 px-4 action-skew text-xs uppercase tracking-wider hover:bg-action transition"><i class="fas fa-user-circle mr-2"></i> Profile</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow pt-24 pb-12 relative z-10">
+        <div class="container mx-auto px-6">
+            
+            <div class="mb-24">
+                <div class="text-center mb-12">
+                    <span class="text-action font-bold tracking-[0.3em] uppercase text-xs animate-pulse">Randomizer Protocol</span>
+                    <h1 class="text-5xl md:text-7xl font-bebas text-white italic mt-2">Mission <span class="text-action" data-text="ROULETTE">Roulette</span></h1>
+                    <p class="text-gray-500 mt-4 max-w-2xl mx-auto text-sm font-mono">Unsure what to watch next? Spin the wheel. Accepted missions are automatically added to your database.</p>
+                </div>
+
+                <div class="max-w-4xl mx-auto tech-card p-2 md:p-8 flex flex-col md:flex-row gap-8 items-center">
+                    <div class="w-full md:w-1/2 h-64 game-screen flex flex-col items-center justify-center relative">
+                        <div class="absolute inset-0 bg-[url('https://media.giphy.com/media/3o7aD2e1E06Gehj0GY/giphy.gif')] opacity-10 bg-cover"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black"></div>
+                        
+                        <div id="roulette-result" class="relative z-10 text-center">
+                            <i class="fas fa-random text-4xl text-gray-700 mb-4" id="roulette-icon"></i>
+                            <h2 class="text-3xl font-bebas text-white tracking-wider" id="anime-title">READY TO SPIN</h2>
+                            <p class="text-action text-xs font-bold uppercase tracking-widest mt-2 opacity-0" id="anime-genre">AWAITING INPUT</p>
+                        </div>
+                        
+                        <div class="absolute top-4 left-4 w-2 h-2 border-t border-l border-action"></div>
+                        <div class="absolute bottom-4 right-4 w-2 h-2 border-b border-r border-action"></div>
+                    </div>
+
+                    <div class="w-full md:w-1/2 flex flex-col justify-center space-y-6">
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-[10px] text-gray-500 font-bold uppercase">
+                                <span>Status</span>
+                                <span id="system-status" class="text-green-500">Online</span>
+                            </div>
+                            <div class="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+                                <div id="power-bar" class="h-full bg-action w-0 transition-all duration-300"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white/5 p-4 border-l-2 border-action">
+                                <span class="block text-2xl font-bebas text-white">S-Rank</span>
+                                <span class="text-[10px] text-gray-500 uppercase">Mission Difficulty</span>
+                            </div>
+                            <div class="bg-white/5 p-4 border-l-2 border-gray-600">
+                                <span class="block text-2xl font-bebas text-white">+500</span>
+                                <span class="text-[10px] text-gray-500 uppercase">XP Reward</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-3">
+                            <button onclick="spinRoulette()" id="spin-btn" class="w-full bg-action text-black font-black py-4 action-skew text-lg uppercase tracking-widest hover:bg-white transition shadow-[0_0_20px_rgba(255,77,0,0.4)]">
+                                <i class="fas fa-play mr-2 text-xs"></i> Deploy System
+                            </button>
+                            <button onclick="acceptMission()" id="accept-btn" class="hidden w-full border border-green-500 text-green-500 font-bold py-3 action-skew text-xs uppercase tracking-widest hover:bg-green-500 hover:text-black transition">
+                                <i class="fas fa-check mr-2"></i> Accept Mission (Add to Logs)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-white/10 pt-24">
+                <div class="flex flex-col md:flex-row justify-between items-end mb-12">
+                    <div>
+                        <h2 class="text-4xl font-bebas text-white italic">Training <span class="text-action">Grounds</span></h2>
+                        <p class="text-gray-500 mt-2 text-xs uppercase tracking-widest">Compete for XP. Sharpen your senses.</p>
+                    </div>
+                    <div class="flex gap-2 mt-4 md:mt-0">
+                        <span class="w-3 h-3 bg-action rounded-full animate-pulse"></span>
+                        <span class="text-[10px] text-white font-mono">LIVE SIMULATION</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    <div class="tech-card p-6 flex flex-col h-[400px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bebas text-white">Chakra <span class="text-action">Reflex</span></h3>
+                            <span class="text-xs font-mono text-gray-400">REWARD: <span class="text-action">+50 XP</span></span>
+                        </div>
+                        <div id="reflex-screen" class="flex-grow game-screen cursor-crosshair flex items-center justify-center text-center p-4 transition-colors duration-200 bg-black" onclick="handleReflexClick()">
+                            <div>
+                                <i class="fas fa-hand-paper text-4xl text-gray-600 mb-4" id="reflex-icon"></i>
+                                <h4 class="text-xl font-bold text-white mb-2" id="reflex-title">Click to Start</h4>
+                                <p class="text-xs text-gray-500 font-mono" id="reflex-sub">Wait for GREEN, then click fast!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tech-card p-6 flex flex-col h-[400px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bebas text-white">Trivia <span class="text-action">Oracle</span></h3>
+                            <span class="text-xs font-mono text-gray-400">SESSION: <span id="trivia-progress" class="text-white">0/5</span></span>
+                        </div>
+                        <div class="flex-grow flex flex-col">
+                            <div class="bg-white/5 p-4 border border-white/10 mb-4 flex-grow flex items-center justify-center text-center relative overflow-hidden">
+                                <div class="absolute inset-0 bg-black/50 z-0"></div>
+                                <p id="trivia-question" class="text-sm text-gray-200 font-bold leading-relaxed relative z-10">Initialize system to begin quiz sequence.</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3" id="trivia-options">
+                                <button onclick="initTriviaSession()" class="col-span-2 border border-action text-action font-bold py-3 text-xs uppercase hover:bg-action hover:text-black transition">Initialize Session</button>
+                            </div>
+                            <p id="trivia-feedback" class="text-center text-[10px] font-mono h-4 mt-3 text-gray-500"></p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="bg-black border-t border-white/10 pt-20 pb-10 mt-auto">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="space-y-6">
+                    <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                    <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="index.html" class="hover:text-action transition-colors">Featured Series</a></li>
+                        <li><a href="index.html" class="hover:text-action transition-colors">Trending Now</a></li>
+                        <li><a href="index.html" class="hover:text-action transition-colors">Browse Genres</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                    <form class="relative mt-4">
+                        <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                        <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                <p>&copy; 2026 Anime Universe.</p>
+                <div class="flex space-x-6">
+                    <span>System Status: <span class="text-action">Operational</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let currentUser = null;
+        let currentSelectedAnime = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // LOAD USER
+            const localData = JSON.parse(localStorage.getItem('currentUser'));
+            if(localData) {
+                try {
+                    currentUser = await dbGetUser(localData.email);
+                } catch(e) {
+                    currentUser = localData; 
+                }
+            } else {
+                showNotification("LOGIN REQUIRED FOR REWARDS", "error");
+            }
+        });
+
+        // XP GRANTING HELPER
+        async function grantXP(amount, reason) {
+            if(!currentUser) { showNotification("LOGIN TO SAVE XP", "error"); return; }
+            currentUser.total_xp = (currentUser.total_xp || 0) + amount;
+            try {
+                await dbUpdateProgress(currentUser.email, currentUser.total_xp, currentUser.level);
+                showNotification(`+${amount} XP: ${reason}`);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser)); 
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        /* --- 1. ROULETTE LOGIC --- */
+        const animeList = [
+            { title: "Attack on Titan", genre: "Action / Horror" },
+            { title: "One Piece", genre: "Adventure / Fantasy" },
+            { title: "Jujutsu Kaisen", genre: "Supernatural / Action" },
+            { title: "Demon Slayer", genre: "Historical / Action" },
+            { title: "Naruto Shippuden", genre: "Adventure / Martial Arts" },
+            { title: "Death Note", genre: "Psychological / Thriller" },
+            { title: "Steins;Gate", genre: "Sci-Fi / Thriller" },
+            { title: "Fullmetal Alchemist: BH", genre: "Military / Fantasy" },
+            { title: "Cyberpunk: Edgerunners", genre: "Sci-Fi / Action" },
+            { title: "Vinland Saga", genre: "Historical / Drama" }
+        ];
+
+        function spinRoulette() {
+            const btn = document.getElementById('spin-btn');
+            const acceptBtn = document.getElementById('accept-btn');
+            const titleEl = document.getElementById('anime-title');
+            const genreEl = document.getElementById('anime-genre');
+            const bar = document.getElementById('power-bar');
+            const iconEl = document.getElementById('roulette-icon');
+
+            btn.disabled = true;
+            acceptBtn.classList.add('hidden');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> CALIBRATING...';
+            genreEl.style.opacity = '0';
+            bar.style.width = '0%';
+            
+            let iterations = 0;
+            const maxIterations = 25;
+            const interval = setInterval(() => {
+                const random = animeList[Math.floor(Math.random() * animeList.length)];
+                titleEl.textContent = random.title.toUpperCase();
+                titleEl.classList.add('text-gray-500');
+                playBeep('hover'); 
+                
+                bar.style.width = (iterations / maxIterations) * 100 + '%';
+                iterations++;
+                
+                if (iterations >= maxIterations) {
+                    clearInterval(interval);
+                    finalizeSpin(random);
+                }
+            }, 100);
+        }
+
+        function finalizeSpin(selected) {
+            currentSelectedAnime = selected;
+            const btn = document.getElementById('spin-btn');
+            const acceptBtn = document.getElementById('accept-btn');
+            const titleEl = document.getElementById('anime-title');
+            const genreEl = document.getElementById('anime-genre');
+            const iconEl = document.getElementById('roulette-icon');
+            const bar = document.getElementById('power-bar');
+
+            playBeep('win');
+            titleEl.textContent = selected.title.toUpperCase();
+            titleEl.classList.remove('text-gray-500');
+            titleEl.classList.add('text-action', 'glitch');
+            titleEl.setAttribute('data-text', selected.title.toUpperCase());
+            
+            genreEl.textContent = selected.genre;
+            genreEl.style.opacity = '1';
+            
+            iconEl.className = "fas fa-check-circle text-4xl text-green-500 mb-4 animate-bounce";
+            bar.style.width = '100%';
+            bar.classList.add('bg-green-500');
+
+            btn.innerHTML = 'Scan Complete';
+            btn.classList.add('bg-gray-800', 'text-gray-500', 'cursor-not-allowed');
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-redo mr-2"></i> Re-Roll';
+                btn.classList.remove('bg-gray-800', 'text-gray-500', 'cursor-not-allowed');
+                acceptBtn.classList.remove('hidden');
+                bar.classList.remove('bg-green-500');
+                titleEl.classList.remove('glitch');
+            }, 1500);
+        }
+
+        async function acceptMission() {
+            if(!currentSelectedAnime || !currentUser) { showNotification("LOGIN REQUIRED", "error"); return; }
+            const btn = document.getElementById('accept-btn');
+            btn.innerHTML = "SAVING...";
+            const missionData = { email: currentUser.email, title: currentSelectedAnime.title, ep: 0, season: 1, status: 'Plan to Watch' };
+            try {
+                await dbAddMission(missionData);
+                grantXP(100, "NEW MISSION ADDED");
+                btn.innerHTML = "MISSION SAVED";
+                btn.classList.add('bg-green-500', 'text-black');
+                setTimeout(() => { btn.classList.add('hidden'); }, 2000);
+            } catch(e) { console.error(e); showNotification("DB ERROR", "error"); btn.innerHTML = "FAILED"; }
+        }
+
+        /* --- 2. REFLEX GAME LOGIC --- */
+        let reflexState = 'waiting'; 
+        let reflexTimer;
+        let reflexStartTime;
+
+        function handleReflexClick() {
+            const screen = document.getElementById('reflex-screen');
+            const title = document.getElementById('reflex-title');
+            const sub = document.getElementById('reflex-sub');
+            const icon = document.getElementById('reflex-icon');
+
+            if (reflexState === 'waiting' || reflexState === 'result') {
+                reflexState = 'ready';
+                screen.style.backgroundColor = '#cf2222';
+                title.textContent = "WAIT FOR GREEN...";
+                sub.textContent = "Do not click yet.";
+                icon.className = "fas fa-traffic-light text-4xl text-white mb-4";
+                const randomDelay = Math.floor(Math.random() * 2000) + 1500;
+                reflexTimer = setTimeout(() => {
+                    reflexState = 'green';
+                    reflexStartTime = Date.now();
+                    screen.style.backgroundColor = '#22c55e';
+                    title.textContent = "CLICK NOW!";
+                    icon.className = "fas fa-bolt text-4xl text-white mb-4 animate-pulse";
+                }, randomDelay);
+            } else if (reflexState === 'ready') {
+                clearTimeout(reflexTimer);
+                reflexState = 'result';
+                screen.style.backgroundColor = '#000';
+                title.textContent = "TOO SOON!";
+                sub.textContent = "Mission Failed.";
+                icon.className = "fas fa-exclamation-triangle text-4xl text-action mb-4";
+                playBeep('error');
+            } else if (reflexState === 'green') {
+                const reactionTime = Date.now() - reflexStartTime;
+                reflexState = 'result';
+                screen.style.backgroundColor = '#000';
+                title.textContent = reactionTime + " ms";
+                sub.textContent = getRank(reactionTime);
+                icon.className = "fas fa-stopwatch text-4xl text-action mb-4";
+                playBeep('win');
+                if(reactionTime < 350) { grantXP(50, "REFLEX TRAINING"); }
+            }
+        }
+
+        function getRank(time) {
+            if (time < 200) return "Rank: HOKAGE (Godlike)";
+            if (time < 250) return "Rank: ANBU (Elite)";
+            if (time < 300) return "Rank: JONIN (Fast)";
+            if (time < 400) return "Rank: CHUNIN (Average)";
+            return "Rank: GENIN (Too Slow)";
+        }
+
+        /* --- 3. TRIVIA LOGIC (IMPROVED: 100 QUESTIONS, 5 RANDOM, SKIP ON WRONG) --- */
+        const triviaDB = [
+            { q: "What is the name of Naruto's tailed beast?", a: ["Kurama", "Shukaku", "Gyuki", "Son Goku"], correct: 0 },
+            { q: "Who is the captain of the Straw Hat Pirates?", a: ["Zoro", "Luffy", "Sanji", "Usopp"], correct: 1 },
+            { q: "In Death Note, what does Ryuk love to eat?", a: ["Grapes", "Chocolate", "Apples", "Humans"], correct: 2 },
+            { q: "Who is the 'Strongest' Jujutsu Sorcerer?", a: ["Sukuna", "Megumi", "Gojo", "Yuji"], correct: 2 },
+            { q: "Which breathing style does Tanjiro use first?", a: ["Thunder", "Beast", "Water", "Fire"], correct: 2 },
+            { q: "What is the One Piece?", a: ["Gold", "Friendship", "Unknown", "A Weapon"], correct: 2 },
+            { q: "Who is the main character of Bleach?", a: ["Ichigo", "Rukia", "Renji", "Aizen"], correct: 0 },
+            { q: "What is Goku's Saiyan name?", a: ["Kakarot", "Vegeta", "Broly", "Raditz"], correct: 0 },
+            { q: "Who wrote the Death Note originally?", a: ["Ryuk", "Light", "L", "Misa"], correct: 0 },
+            { q: "What guild is Natsu Dragneel in?", a: ["Sabertooth", "Blue Pegasus", "Fairy Tail", "Lamia Scale"], correct: 2 },
+            { q: "Who is the Fullmetal Alchemist?", a: ["Alphonse", "Edward", "Roy", "Hughes"], correct: 1 },
+            { q: "What is the name of Ash's first Pokemon?", a: ["Charmander", "Squirtle", "Pikachu", "Bulbasaur"], correct: 2 },
+            { q: "In AOT, who is the Colossal Titan initially?", a: ["Reiner", "Bertholdt", "Annie", "Eren"], correct: 1 },
+            { q: "What is the currency in Hunter x Hunter?", a: ["Yen", "Jenny", "Berries", "Zeni"], correct: 1 },
+            { q: "Who is the 6th Hokage?", a: ["Naruto", "Tsunade", "Kakashi", "Danzo"], correct: 2 },
+            { q: "What is Saitama's hero name?", a: ["One Punch Man", "Baldy", "Caped Baldy", "Strongman"], correct: 2 },
+            { q: "Who is the brother of Sasuke Uchiha?", a: ["Madara", "Obito", "Itachi", "Shisui"], correct: 2 },
+            { q: "What is the name of Yuji Itadori's grandpa?", a: ["Wasuke", "Jin", "Sukuna", "Kenjaku"], correct: 0 },
+            { q: "Who uses the Gum-Gum Fruit?", a: ["Ace", "Sabo", "Luffy", "Shanks"], correct: 2 },
+            { q: "What is the name of Gon's father?", a: ["Ging", "Kite", "Silva", "Zeno"], correct: 0 },
+            { q: "Who is the Flame Hashira?", a: ["Tomioka", "Rengoku", "Uzui", "Shinobu"], correct: 1 },
+            { q: "What is the name of the sword Zoro gets in Wano?", a: ["Shusui", "Wado Ichimonji", "Enma", "Sandai Kitetsu"], correct: 2 },
+            { q: "Who is the MC of My Hero Academia?", a: ["Bakugo", "Todoroki", "Deku", "All Might"], correct: 2 },
+            { q: "What is the name of the cat in Sailor Moon?", a: ["Luna", "Artemis", "Diana", "Meow"], correct: 0 },
+            { q: "Who is the Avatar after Aang?", a: ["Roku", "Kyoshi", "Korra", "Wan"], correct: 2 },
+            { q: "What is the name of the spirit in Mob Psycho 100?", a: ["Dimple", "Pimple", "Simple", "Rimuru"], correct: 0 },
+            { q: "Who is the leader of the Phantom Troupe?", a: ["Hisoka", "Chrollo", "Feitan", "Nobunaga"], correct: 1 },
+            { q: "What is the name of the land in Black Clover?", a: ["Clover Kingdom", "Diamond Kingdom", "Heart Kingdom", "Spade Kingdom"], correct: 0 },
+            { q: "Who is the 'Copy Ninja'?", a: ["Kakashi", "Gai", "Asuma", "Kurenai"], correct: 0 },
+            { q: "What is the name of the ship in One Piece (First)?", a: ["Thousand Sunny", "Going Merry", "Moby Dick", "Oro Jackson"], correct: 1 },
+            { q: "Who is the teacher of Team 7?", a: ["Jiraiya", "Kakashi", "Iruka", "Tsunade"], correct: 1 },
+            { q: "Who is the 'King of Curses'?", a: ["Mahito", "Jogo", "Sukuna", "Hanami"], correct: 2 },
+            { q: "What is the name of the organization in Naruto?", a: ["Akatsuki", "Kara", "Root", "Anbu"], correct: 0 },
+            { q: "Who is the 'Yellow Flash'?", a: ["Naruto", "Minato", "Jiraiya", "Kakashi"], correct: 1 },
+            { q: "What is the name of the Titan Eren possesses?", a: ["Armored", "Colossal", "Attack", "Beast"], correct: 2 },
+            { q: "Who is the 'Hero of the Hidden Leaf'?", a: ["Naruto", "Sasuke", "Sakura", "Kakashi"], correct: 0 },
+            { q: "What is the name of the sword Ichigo uses?", a: ["Zangetsu", "Zabimaru", "Senbonzakura", "Hyorinmaru"], correct: 0 },
+            { q: "Who is the 'Pirate Hunter'?", a: ["Sanji", "Nami", "Zoro", "Usopp"], correct: 2 },
+            { q: "What is the name of the ninja village in Naruto?", a: ["Konoha", "Suna", "Kiri", "Kumo"], correct: 0 },
+            { q: "Who is the 'Ghost of the Uchiha'?", a: ["Madara", "Obito", "Itachi", "Sasuke"], correct: 0 },
+            { q: "What is the name of the wizard king in Black Clover?", a: ["Julius", "Yami", "Vangeance", "Nozel"], correct: 0 },
+            { q: "Who is the 'Strongest Man in the World' in One Piece?", a: ["Kaido", "Big Mom", "Whitebeard", "Shanks"], correct: 2 },
+            { q: "What is the name of the exam in Hunter x Hunter?", a: ["Hunter Exam", "Chunin Exam", "Hero Exam", "Ninja Exam"], correct: 0 },
+            { q: "Who is the 'Prince of All Saiyans'?", a: ["Goku", "Gohan", "Vegeta", "Trunks"], correct: 2 },
+            { q: "What is the name of the notebook in Death Note?", a: ["Life Note", "Death Note", "Kill Note", "End Note"], correct: 1 },
+            { q: "Who is the 'Sorcerer Killer'?", a: ["Toji", "Maki", "Mai", "Naobito"], correct: 0 },
+            { q: "What is the name of the family in Spy x Family?", a: ["Forger", "Briar", "Desmond", "Bond"], correct: 0 },
+            { q: "Who is the 'Chainsaw Man'?", a: ["Denji", "Power", "Aki", "Makima"], correct: 0 },
+            { q: "What is the name of the robot in Evangelion?", a: ["Gundam", "Eva", "Mecha", "Zaku"], correct: 1 },
+            { q: "Who is the 'Black Swordsman'?", a: ["Kirito", "Guts", "Zoro", "Ichigo"], correct: 0 },
+            { q: "What is the name of the virtual world in SAO?", a: ["Aincrad", "Alfheim", "Gun Gale", "Underworld"], correct: 0 },
+            { q: "Who is the 'One Eyed Owl'?", a: ["Eto", "Yoshimura", "Kaneki", "Touka"], correct: 0 },
+            { q: "What is the name of the cafe in Tokyo Ghoul?", a: ["Anteiku", "Re", "Goat", "CCG"], correct: 0 },
+            { q: "Who is the 'King of the Court'?", a: ["Hinata", "Kageyama", "Oikawa", "Nishinoya"], correct: 1 },
+            { q: "What is the name of the sport in Haikyuu?", a: ["Basketball", "Soccer", "Volleyball", "Tennis"], correct: 2 },
+            { q: "Who is the 'Generation of Miracles' ace?", a: ["Kuroko", "Kagami", "Aomine", "Akashi"], correct: 2 },
+            { q: "What is the name of the basketball anime?", a: ["Slam Dunk", "Haikyuu", "Free", "Blue Lock"], correct: 0 },
+            { q: "Who is the 'Little Giant'?", a: ["Hinata", "Tenma", "Hoshiumi", "Bokuto"], correct: 1 },
+            { q: "What is the name of the swimmer in Free?", a: ["Haruka", "Makoto", "Nagisa", "Rei"], correct: 0 },
+            { q: "Who is the 'Blue Lock' egoist?", a: ["Isagi", "Bachira", "Rin", "Nagi"], correct: 0 },
+            { q: "What is the name of the alchemy law?", a: ["Equivalent Exchange", "Conservation of Mass", "Law of Truth", "Philosopher's Stone"], correct: 0 },
+            { q: "Who is the 'Flame Alchemist'?", a: ["Armstrong", "Mustang", "Hughes", "Hawkeye"], correct: 1 },
+            { q: "What is the name of the homunculus leader?", a: ["Father", "Dante", "Envy", "Pride"], correct: 0 },
+            { q: "Who is the 'Fullmetal'?", a: ["Alphonse", "Edward", "Winry", "Pinako"], correct: 1 },
+            { q: "What is the name of the dog in FMA?", a: ["Den", "Alexander", "Black Hayate", "Ein"], correct: 0 },
+            { q: "Who is the 'Ice Alchemist'?", a: ["McDougal", "Isaac", "Basque", "Kimblee"], correct: 1 },
+            { q: "What is the name of the gate in FMA?", a: ["Gate of Truth", "Gate of Babylon", "Gate of Steiner", "Gate of Hell"], correct: 0 },
+            { q: "Who is the 'Sewing Life Alchemist'?", a: ["Tucker", "Marcoh", "Knox", "Marcoh"], correct: 0 },
+            { q: "What is the name of the country in FMA?", a: ["Amestris", "Xing", "Drachma", "Creta"], correct: 0 },
+            { q: "Who is the 'Greed'?", a: ["Ling", "Lan Fan", "May", "Fu"], correct: 0 },
+            { q: "What is the name of the currency in Cowboy Bebop?", a: ["Woolong", "Double Dollar", "Credit", "Gold"], correct: 0 },
+            { q: "Who is the 'Space Cowboy'?", a: ["Spike", "Jet", "Faye", "Ed"], correct: 0 },
+            { q: "What is the name of the ship in Cowboy Bebop?", a: ["Bebop", "Swordfish", "Red Tail", "Hammerhead"], correct: 0 },
+            { q: "Who is the 'Vash the Stampede'?", a: ["Humanoid Typhoon", "Black Swordsman", "Space Dandy", "Trigun"], correct: 0 },
+            { q: "What is the name of the gun in Trigun?", a: ["Angel Arm", "Punisher", "Cross", "Hades"], correct: 0 },
+            { q: "Who is the 'Major'?", a: ["Motoko", "Batou", "Togusa", "Aramaki"], correct: 0 },
+            { q: "What is the name of the AI in Ghost in the Shell?", a: ["Tachikoma", "Logikoma", "Fuchikoma", "Uchikoma"], correct: 0 },
+            { q: "Who is the 'Light Yagami'?", a: ["Kira", "L", "Near", "Mello"], correct: 0 },
+            { q: "What is the name of the detective in Death Note?", a: ["L", "M", "N", "O"], correct: 0 },
+            { q: "Who is the 'Second Kira'?", a: ["Misa", "Takada", "Mikami", "Higuchi"], correct: 0 },
+            { q: "What is the name of the shinigami in Death Note?", a: ["Ryuk", "Rem", "Sidoh", "Jealous"], correct: 0 },
+            { q: "Who is the 'Successor to L'?", a: ["Near", "Mello", "Matt", "Beyond"], correct: 0 },
+            { q: "What is the name of the apple lover?", a: ["Ryuk", "Light", "L", "Misa"], correct: 0 },
+            { q: "Who is the 'God of the New World'?", a: ["Light", "L", "Ryuk", "Near"], correct: 0 },
+            { q: "What is the name of the potato girl in AOT?", a: ["Sasha", "Mikasa", "Annie", "Historia"], correct: 0 },
+            { q: "Who is the 'Captain' in AOT?", a: ["Levi", "Erwin", "Hange", "Mike"], correct: 0 },
+            { q: "What is the name of the wall in AOT?", a: ["Maria", "Rose", "Sina", "All of the above"], correct: 3 },
+            { q: "Who is the 'Female Titan'?", a: ["Annie", "Mikasa", "Ymir", "Historia"], correct: 0 },
+            { q: "What is the name of the basement key owner?", a: ["Eren", "Mikasa", "Armin", "Levi"], correct: 0 },
+            { q: "Who is the 'Beast Titan'?", a: ["Zeke", "Reiner", "Bertholdt", "Marcel"], correct: 0 },
+            { q: "What is the name of the Ackermann?", a: ["Mikasa", "Levi", "Kenny", "All of the above"], correct: 3 },
+            { q: "Who is the 'Cart Titan'?", a: ["Pieck", "Porco", "Galliard", "Falco"], correct: 0 },
+            { q: "What is the name of the founding titan?", a: ["Ymir", "Eren", "Frieda", "Uri"], correct: 0 },
+            { q: "Who is the 'Jaw Titan'?", a: ["Porco", "Marcel", "Ymir", "Falco"], correct: 0 },
+            { q: "What is the name of the war hammer titan?", a: ["Lara", "Willy", "Eren", "Zeke"], correct: 0 },
+            { q: "Who is the 'Owl'?", a: ["Kruger", "Grisha", "Eren", "Zeke"], correct: 0 },
+            { q: "What is the name of the island in AOT?", a: ["Paradis", "Marley", "Hizuru", "Onyankopon"], correct: 0 },
+            { q: "Who is the 'Queen of the Walls'?", a: ["Historia", "Ymir", "Frieda", "Rod"], correct: 0 },
+            { q: "What is the name of the corps in AOT?", a: ["Survey", "Garrison", "Military", "All of the above"], correct: 3 },
+            { q: "Who is the 'Commander'?", a: ["Erwin", "Hange", "Armin", "Keith"], correct: 0 }
+        ];
+        
+        let sessionQuestions = [];
+        let currentQuestionIndex = 0;
+        let sessionScore = 0;
+
+        function initTriviaSession() {
+            // 1. Reset State
+            sessionScore = 0;
+            currentQuestionIndex = 0;
+            
+            // 2. Select 5 Random Questions
+            const shuffled = [...triviaDB].sort(() => 0.5 - Math.random());
+            sessionQuestions = shuffled.slice(0, 5);
+            
+            // 3. Update UI
+            document.getElementById('trivia-progress').textContent = `1/5`;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = sessionQuestions[currentQuestionIndex];
+            const qEl = document.getElementById('trivia-question');
+            const optsEl = document.getElementById('trivia-options');
+            const feedbackEl = document.getElementById('trivia-feedback');
+            const progressEl = document.getElementById('trivia-progress');
+
+            progressEl.textContent = `${currentQuestionIndex + 1}/5`;
+            qEl.textContent = q.q;
+            optsEl.innerHTML = "";
+            feedbackEl.textContent = "";
+
+            q.a.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "border border-white/20 text-gray-300 py-2 text-[10px] hover:bg-white/10 transition text-left px-4";
+                btn.textContent = opt;
+                btn.onclick = () => handleAnswer(index, q.correct);
+                optsEl.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selected, correct) {
+            const feedbackEl = document.getElementById('trivia-feedback');
+            
+            if (selected === correct) {
+                sessionScore++;
+                feedbackEl.textContent = "CORRECT";
+                feedbackEl.className = "text-center text-[10px] font-mono h-4 mt-3 text-green-500";
+                playBeep('win');
+            } else {
+                feedbackEl.textContent = "WRONG - SKIPPING";
+                feedbackEl.className = "text-center text-[10px] font-mono h-4 mt-3 text-red-500";
+                playBeep('error');
+            }
+
+            // Move to next question after short delay
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if(currentQuestionIndex < 5) {
+                    loadQuestion();
+                } else {
+                    endSession();
+                }
+            }, 1000);
+        }
+
+        function endSession() {
+            const qEl = document.getElementById('trivia-question');
+            const optsEl = document.getElementById('trivia-options');
+            const feedbackEl = document.getElementById('trivia-feedback');
+            
+            qEl.textContent = `SESSION COMPLETE. SCORE: ${sessionScore}/5`;
+            optsEl.innerHTML = `<button onclick="initTriviaSession()" class="col-span-2 border border-action text-action font-bold py-3 text-xs uppercase hover:bg-action hover:text-black transition">NEW SESSION</button>`;
+            
+            if(sessionScore >= 3) {
+                const xpGain = sessionScore * 10;
+                feedbackEl.textContent = `PASSED. +${xpGain} XP AWARDED.`;
+                feedbackEl.className = "text-center text-[10px] font-mono h-4 mt-3 text-green-500";
+                grantXP(xpGain, "TRIVIA SESSION");
+            } else {
+                feedbackEl.textContent = "FAILED. SCORE TOO LOW.";
+                feedbackEl.className = "text-center text-[10px] font-mono h-4 mt-3 text-red-500";
+            }
+        }
+    </script>
+</body>
+</html>

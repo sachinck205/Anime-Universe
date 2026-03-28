@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Tactical Morale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { action: { DEFAULT: '#ff4d00', dark: '#cc3d00' } },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #050505; color: #f1f1f1; min-height: 100vh; display: flex; flex-direction: column; background-image: linear-gradient(rgba(255,77,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,77,0,0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        
+        .sidebar-link { transition: all 0.2s ease; border-left: 3px solid transparent; cursor: pointer; }
+        .sidebar-link:hover, .sidebar-link.active { background: linear-gradient(90deg, rgba(255,77,0,0.1), transparent); padding-left: 1.5rem; color: white; border-left-color: #ff4d00; }
+        
+        /* Quote Card Styling */
+        .quote-container {
+            background: radial-gradient(circle at top right, rgba(30,30,30,0.8), rgba(10,10,10,0.95));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.7);
+        }
+        .quote-container::before {
+            content: ''; position: absolute; top: -1px; left: -1px; right: -1px; height: 2px;
+            background: linear-gradient(90deg, transparent, #ff4d00, transparent);
+            animation: scanline 4s linear infinite;
+        }
+        @keyframes scanline { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+        .quote-text { min-height: 120px; transition: opacity 0.3s ease; }
+        .fade-out { opacity: 0; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white">
+
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-gray-800 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+            <div class="flex items-center space-x-6">
+                <span class="text-[10px] text-gray-500 font-mono hidden md:block">NEURAL SYNC: ONLINE</span>
+                <button id="logout-btn" class="border border-red-600/50 text-red-500 font-bold py-1 px-4 text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition">Disconnect</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-[72px] flex-1">
+        <aside class="w-64 bg-black/80 border-r border-gray-800 p-6 hidden lg:flex flex-col fixed h-full z-40">
+            <div class="flex items-center gap-4 mb-8 pb-6 border-b border-white/5">
+                <div class="w-10 h-10 bg-gray-900 flex items-center justify-center border border-action"><i class="fas fa-brain text-white"></i></div>
+                <div><h2 id="nav-username" class="font-bold text-sm text-white tracking-widest uppercase leading-tight">OPERATIVE</h2><span class="text-[9px] text-gray-500 font-mono">SYNCING...</span></div>
+            </div>
+            <nav class="space-y-1 flex-1">
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 pl-4">Main Deck</div>
+                <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-id-card w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Identity</span></a>
+                <a href="missions.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-list-check w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Mission Logs</span></a>
+                <a href="network.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-globe w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Global Network</span></a>
+                
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 mt-6 pl-4">Intel</div>
+                <a href="quotes.html" class="sidebar-link active flex items-center px-4 py-3 text-gray-300"><i class="fas fa-bolt w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Tactical Morale</span></a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 bg-transparent lg:ml-64 flex flex-col relative z-0 min-h-screen p-6 lg:p-10 justify-center items-center">
+            
+            <div class="max-w-4xl mx-auto w-full">
+                
+                <div class="text-center mb-12">
+                    <h1 class="text-5xl md:text-7xl font-bebas text-white tracking-widest mb-2">Tactical <span class="text-action">Morale</span></h1>
+                    <p class="text-xs text-gray-500 font-mono uppercase tracking-[0.3em]">Refuel your spirit. Execute your dreams.</p>
+                </div>
+
+                <div class="quote-container p-8 md:p-16 text-center relative max-w-3xl mx-auto">
+                    <i class="fas fa-quote-left absolute top-8 left-8 text-4xl text-white/5"></i>
+                    <i class="fas fa-quote-right absolute bottom-8 right-8 text-4xl text-white/5"></i>
+
+                    <div id="quote-display" class="quote-text flex flex-col justify-center items-center">
+                        <h2 id="q-text" class="text-2xl md:text-4xl font-bold leading-tight text-white mb-6 italic">
+                            "If you don't take risks, you can't create a future."
+                        </h2>
+                        <div class="border-t border-white/10 pt-4 w-full">
+                            <p id="q-char" class="text-action font-bebas text-xl tracking-widest">Monkey D. Luffy</p>
+                            <p id="q-anime" class="text-[10px] text-gray-500 font-mono uppercase">One Piece</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 flex justify-center gap-4">
+                        <button onclick="copyQuote()" class="border border-white/10 bg-white/5 text-gray-400 w-12 h-12 flex items-center justify-center hover:bg-white hover:text-black transition">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button onclick="generateQuote()" class="bg-action text-white font-bold py-3 px-8 uppercase tracking-widest text-xs hover:bg-white hover:text-black transition border border-action shadow-[0_0_20px_rgba(255,77,0,0.3)]">
+                            <i class="fas fa-sync-alt mr-2"></i> Sync New Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 opacity-50 hover:opacity-100 transition duration-500">
+                    <div class="text-center p-4 border border-white/5 bg-white/5">
+                        <div class="text-action font-bold text-2xl mb-1">Naruto</div>
+                        <div class="text-[9px] text-gray-500 uppercase">Never Give Up</div>
+                    </div>
+                    <div class="text-center p-4 border border-white/5 bg-white/5">
+                        <div class="text-blue-500 font-bold text-2xl mb-1">Gojo</div>
+                        <div class="text-[9px] text-gray-500 uppercase">Be The Strongest</div>
+                    </div>
+                    <div class="text-center p-4 border border-white/5 bg-white/5">
+                        <div class="text-green-500 font-bold text-2xl mb-1">Deku</div>
+                        <div class="text-[9px] text-gray-500 uppercase">Go Beyond</div>
+                    </div>
+                    <div class="text-center p-4 border border-white/5 bg-white/5">
+                        <div class="text-purple-500 font-bold text-2xl mb-1">Lelouch</div>
+                        <div class="text-[9px] text-gray-500 uppercase">Change the World</div>
+                    </div>
+                </div>
+
+            </div>
+            <footer class="bg-black border-t border-white/10 pt-20 pb-10 mt-auto">
+                <div class="container mx-auto px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                        <div class="space-y-6">
+                            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                            <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                                <li><a href="#Trending" class="hover:text-action transition-colors">Trending Now</a></li>
+                                <li><a href="#genres" class="hover:text-action transition-colors">Browse Genres</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                            <form class="relative mt-4">
+                                <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                                <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                        <p>&copy; 2026 Anime Universe.</p>
+                        <div class="flex space-x-6">
+                            <span>System Status: <span class="text-action">Operational</span></span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // AUTH CHECK
+        if (localStorage.getItem('isLoggedIn') !== 'true') window.location.href = 'login.html';
+        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+        document.getElementById('nav-username').textContent = currentUser.username || "OPERATIVE";
+        document.documentElement.style.setProperty('--accent-color', currentUser.theme || '#ff4d00');
+
+        // DATABASE
+        const quotesDB = [
+            { text: "If you don't take risks, you can't create a future.", char: "Monkey D. Luffy", anime: "One Piece" },
+            { text: "Hard work betrays none, but dreams betray many.", char: "Hachiman Hikigaya", anime: "Oregairu" },
+            { text: "The only ones who should kill, are those who are prepared to be killed.", char: "Lelouch Vi Britannia", anime: "Code Geass" },
+            { text: "Fear is not evil. It tells you what your weakness is.", char: "Gildarts Clive", anime: "Fairy Tail" },
+            { text: "Whatever you lose, you'll find it again. But what you throw away you'll never get back.", char: "Kenshin Himura", anime: "Rurouni Kenshin" },
+            { text: "A dropout will beat a genius through hard work.", char: "Rock Lee", anime: "Naruto" },
+            { text: "If you have time to think of a beautiful end, then live beautifully until the end.", char: "Gintoki Sakata", anime: "Gintama" },
+            { text: "People, who can’t throw something important away, can never hope to change anything.", char: "Armin Arlert", anime: "Attack on Titan" },
+            { text: "Giving up is what kills people.", char: "Hellsing Alucard", anime: "Hellsing" },
+            { text: "It’s not always possible to do what we want, but it’s important to believe in something before you actually do it.", char: "Might Guy", anime: "Naruto" },
+            { text: "The world isn’t perfect. But it’s there for us, doing the best it can.", char: "Roy Mustang", anime: "Fullmetal Alchemist" },
+            { text: "Knowing you're different is only the beginning. If you accept these differences you'll be able to create a new chemical reaction.", char: "Miss Kobayashi", anime: "Dragon Maid" }
+        ];
+
+        function generateQuote() {
+            const display = document.getElementById('quote-display');
+            
+            // 1. Fade Out
+            display.classList.add('fade-out');
+
+            setTimeout(() => {
+                // 2. Change Data
+                const random = Math.floor(Math.random() * quotesDB.length);
+                const q = quotesDB[random];
+
+                document.getElementById('q-text').textContent = `"${q.text}"`;
+                document.getElementById('q-char').textContent = q.char;
+                document.getElementById('q-anime').textContent = q.anime;
+
+                // 3. Fade In
+                display.classList.remove('fade-out');
+            }, 300);
+        }
+
+        function copyQuote() {
+            const text = document.getElementById('q-text').textContent;
+            const char = document.getElementById('q-char').textContent;
+            const fullText = `${text} - ${char} (Anime Universe)`;
+            
+            navigator.clipboard.writeText(fullText).then(() => {
+                alert("Intel Copied to Clipboard!");
+            });
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => { 
+            localStorage.setItem('isLoggedIn', 'false'); 
+            window.location.href = 'index.html'; 
+        });
+    </script>
+</body>
+</html>

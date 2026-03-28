@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Mission Logs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="anime-db.js"></script>
+
+    <script>tailwind.config = { theme: { extend: { colors: { action: { DEFAULT: '#ff4d00', dark: '#cc3d00' } } } } }</script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #050505; color: #f1f1f1; min-height: 100vh; display: flex; flex-direction: column; background-image: linear-gradient(rgba(255,77,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,77,0,0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        .sidebar-link { transition: all 0.2s ease; border-left: 3px solid transparent; cursor: pointer; }
+        .sidebar-link:hover, .sidebar-link.active { background: linear-gradient(90deg, rgba(255,77,0,0.1), transparent); padding-left: 1.5rem; color: white; border-left-color: #ff4d00; }
+        .log-card { background: rgba(20,20,20,0.95); border: 1px solid rgba(255,255,255,0.05); position: relative; overflow: hidden; transition: 0.3s; }
+        .log-card:hover { transform: translateX(5px); border-color: rgba(255,77,0,0.3); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+        .log-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #333; transition: 0.3s; }
+        .log-card:hover::before { background: #ff4d00; }
+        .progress-glow { box-shadow: 0 0 10px rgba(255, 77, 0, 0.5); }
+        #addAnimeModal:not(.hidden), #deleteConfirmModal:not(.hidden) { display: flex; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white">
+
+    <div id="notification-area" class="fixed top-24 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-gray-800 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+            <div class="flex items-center space-x-6">
+                <div class="hidden md:block text-right"><div class="text-[10px] text-action font-mono">● SECURE CONNECTION</div></div>
+                <button id="logout-btn" class="border border-red-600/50 text-red-500 font-bold py-1 px-4 text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition">Disconnect</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-[72px] flex-1">
+        <aside class="w-64 bg-black/80 border-r border-gray-800 p-6 hidden lg:flex flex-col fixed h-full z-40">
+            <div class="flex items-center space-x-4 mb-10 pl-2">
+                <div class="relative"><img id="sidebar-avatar" src="" class="rounded-full border-2 border-action w-10 h-10 bg-gray-900 object-cover"><div class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-black"></div></div>
+                <div><h2 id="sidebar-name" class="font-bold text-xs text-white tracking-wide uppercase">...</h2><span class="text-[9px] text-gray-500 font-mono uppercase tracking-wider">Operative</span></div>
+            </div>
+            <nav class="space-y-1 flex-1">
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 pl-4">Main Deck</div>
+                <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-id-card w-6 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold">Identity</span></a>
+                <a href="missions.html" class="sidebar-link active flex items-center px-4 py-3 text-gray-300"><i class="fas fa-list-check w-6 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold">Mission Logs</span></a>
+                <a href="network.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-globe w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Global Network</span></a>
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 mt-6 pl-4">Utilities</div>
+                <a href="account_settings.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-cog w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">System Config</span></a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 bg-transparent lg:ml-64 flex flex-col relative z-0 min-h-screen">
+            <div class="p-6 lg:p-10 flex-grow max-w-7xl mx-auto w-full">
+                <div class="flex justify-between items-end mb-8 border-b border-white/10 pb-6">
+                    <div><h1 class="text-4xl font-bebas tracking-wider text-white">Mission <span class="text-action">Logs</span></h1><p class="text-xs text-gray-500 font-mono mt-1">ACTIVE OPERATIONS DATABASE</p></div>
+                    <button onclick="openModal()" class="bg-action hover:bg-white text-black font-bold py-2 px-6 text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,77,0,0.4)] flex items-center gap-2"><i class="fas fa-plus"></i> Initialize New</button>
+                </div>
+                <div id="progressGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div class="text-gray-500 font-mono text-xs col-span-3 text-center py-10 animate-pulse">CONNECTING TO MAINFRAME...</div>
+                </div>
+            </div>
+            
+            <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+                <div class="container mx-auto px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                        <div class="space-y-6">
+                            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                            <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="index.html" class="hover:text-action transition-colors">Featured Series</a></li>
+                                <li><a href="index.html" class="hover:text-action transition-colors">Trending Now</a></li>
+                                <li><a href="index.html" class="hover:text-action transition-colors">Browse Genres</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                            <form class="relative mt-4">
+                                <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                                <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                        <p>&copy; 2026 Anime Universe.</p>
+                        <div class="flex space-x-6">
+                            <span>System Status: <span class="text-action">Operational</span></span>
+                        </div>
+                    </div>
+                </div>
+            </footer>     
+         </main>
+    </div>
+
+    <div id="addAnimeModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-[70] flex items-center justify-center p-4">
+        <div class="bg-[#090909] border border-white/10 w-full max-w-md relative shadow-2xl p-8">
+            <div class="absolute top-0 left-0 w-full h-1 bg-action"></div>
+            <div class="flex justify-between items-center mb-6"><h2 id="modalTitle" class="text-2xl font-bebas tracking-wider text-white">Track <span class="text-action">Data</span></h2><button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl"><i class="fas fa-times"></i></button></div>
+            <form id="addAnimeForm" class="space-y-4">
+                <input type="hidden" id="editCardId" value="">
+                <div><label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Target Name</label><input type="text" id="animeName" class="w-full p-3 bg-black border border-white/10 text-white text-sm font-mono" required></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Episode</label><input type="number" id="episodesWatched" class="w-full p-3 bg-black border border-white/10 text-white text-sm font-mono"></div>
+                    <div><label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Season</label><input type="number" id="currentSeason" class="w-full p-3 bg-black border border-white/10 text-white text-sm font-mono"></div>
+                </div>
+                <div><label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Status</label><select id="trackingStatus" class="w-full p-3 bg-black border border-white/10 text-white text-sm cursor-pointer"><option value="Watching">In Progress</option><option value="Completed">Mission Complete</option><option value="Plan to Watch">Intel</option></select></div>
+                
+                <div class="flex gap-3 mt-4">
+                    <button type="button" id="deleteBtn" onclick="requestDelete()" class="w-1/3 bg-red-900/50 border border-red-600 text-red-500 hover:bg-red-600 hover:text-white font-bold py-3 uppercase tracking-widest transition-colors text-xs hidden">Terminate</button>
+                    <button type="submit" id="saveBtn" class="flex-1 bg-action text-black font-bold py-3 uppercase tracking-widest hover:bg-white transition-colors text-xs border border-action">Confirm Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="deleteConfirmModal" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden z-[80] flex items-center justify-center p-4">
+        <div class="bg-[#090909] border border-red-600 w-full max-w-sm relative shadow-[0_0_30px_rgba(220,38,38,0.3)] p-8 text-center">
+            <h3 class="text-2xl font-bebas text-white tracking-wider mb-2">CONFIRM <span class="text-red-600">TERMINATION</span></h3>
+            <p class="text-xs text-gray-400 mb-6 font-mono">This will permanently delete the mission log.</p>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeDeleteModal()" class="flex-1 border border-white/20 text-white font-bold py-3 uppercase tracking-widest hover:bg-white/10 transition text-xs">Cancel</button>
+                <button onclick="executeDelete()" class="flex-1 bg-red-600 text-white font-bold py-3 uppercase tracking-widest hover:bg-red-700 transition text-xs">Terminate</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = {}; 
+        let missionLogs = [];
+
+        // UPGRADED NOTIFICATION SYSTEM
+        function showNotification(msg, type='success') {
+            const container = document.getElementById('notification-area');
+            if(!container) return; // Safety check
+
+            const toast = document.createElement('div');
+            // Red border for delete/error, Orange for success
+            const colorClass = type === 'error' ? 'border-red-600' : 'border-action';
+            const iconClass = type === 'error' ? 'fa-trash-alt' : 'fa-check-circle';
+            
+            toast.className = `bg-black/95 border-l-4 ${colorClass} text-white p-4 text-xs font-mono shadow-2xl flex items-center gap-3 transform translate-x-full transition-transform duration-300 pointer-events-auto border-y border-r border-white/10`;
+            toast.innerHTML = `<i class="fas ${iconClass}"></i> <span class="uppercase font-bold tracking-wider">${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Slide in
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full'));
+            
+            // Slide out after 3s
+            setTimeout(() => { 
+                toast.classList.add('translate-x-full'); 
+                setTimeout(() => toast.remove(), 300); 
+            }, 3000);
+        }
+
+        function renderLogs() {
+            const grid = document.getElementById('progressGrid');
+            grid.innerHTML = '';
+            
+            if(missionLogs.length === 0) { 
+                grid.innerHTML = '<div class="text-gray-600 text-xs font-mono col-span-3 text-center py-8">NO ACTIVE MISSIONS.</div>'; 
+                return; 
+            }
+            
+            missionLogs.forEach(log => {
+                const isDone = log.status === 'Completed';
+                const barColor = isDone ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-action progress-glow';
+                const icon = isDone ? 'fa-check text-green-500' : 'fa-eye text-action';
+                const meta = isDone ? '<span class="text-green-500 font-bold tracking-widest text-[10px]">MISSION COMPLETE</span>' : `<p class="text-[10px] text-gray-500 font-mono mt-1 uppercase tracking-widest">Season ${log.season} • Ep ${log.ep}</p>`;
+                
+                const html = `
+                <div class="log-card p-6 flex flex-col justify-between h-40 group relative">
+                    <div class="flex justify-between items-start">
+                        <div><h3 class="font-bold text-white text-lg tracking-wide group-hover:text-action transition-colors truncate w-48">${log.title}</h3>${meta}</div>
+                        <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-action transition-colors"><i class="fas ${icon} text-xs"></i></div>
+                    </div>
+                    <div class="space-y-2"><div class="flex justify-between text-[9px] text-gray-400 font-mono"><span>STATUS: ${log.status.toUpperCase()}</span><span>${isDone ? '100%' : 'IN PROGRESS'}</span></div><div class="w-full bg-gray-800 h-1"><div class="${barColor} h-1 transition-all" style="width: ${isDone ? '100%' : '40%'}"></div></div></div>
+                    <button onclick="editLog(${log.id})" class="absolute top-4 right-14 text-gray-600 hover:text-white transition"><i class="fas fa-pen text-xs"></i></button>
+                </div>`;
+                grid.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // CHECK LOGIN
+            const localUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!localUser || !localUser.email) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                // FETCH FROM DB
+                currentUser = await dbGetUser(localUser.email);
+                missionLogs = await dbGetMissions(currentUser.email);
+
+                // UPDATE SIDEBAR
+                document.getElementById('sidebar-name').textContent = (currentUser.nickname || currentUser.username).toUpperCase();
+                document.getElementById('sidebar-avatar').src = `https://ui-avatars.com/api/?name=${(currentUser.username || "U").charAt(0)}&background=111&color=ff4d00&size=200&bold=true`;
+                
+                renderLogs();
+
+            } catch (err) {
+                console.error(err);
+                showNotification("DATABASE CONNECTION FAILED", "error");
+            }
+
+            // EVENT HANDLERS
+            window.openModal = function() { 
+                document.getElementById('addAnimeModal').classList.remove('hidden'); 
+                document.getElementById('addAnimeForm').reset(); 
+                document.getElementById('editCardId').value = ''; 
+                document.getElementById('deleteBtn').classList.add('hidden');
+            };
+            
+            window.closeModal = function() { document.getElementById('addAnimeModal').classList.add('hidden'); };
+            
+            window.editLog = function(id) {
+                const log = missionLogs.find(l => l.id === id);
+                if(log) {
+                    document.getElementById('editCardId').value = log.id; 
+                    document.getElementById('animeName').value = log.title;
+                    document.getElementById('episodesWatched').value = log.ep; 
+                    document.getElementById('currentSeason').value = log.season;
+                    document.getElementById('trackingStatus').value = log.status;
+                    document.getElementById('deleteBtn').classList.remove('hidden');
+                    document.getElementById('addAnimeModal').classList.remove('hidden');
+                }
+            };
+
+            window.requestDelete = function() {
+                document.getElementById('addAnimeModal').classList.add('hidden');
+                document.getElementById('deleteConfirmModal').classList.remove('hidden');
+            };
+
+            window.closeDeleteModal = function() {
+                document.getElementById('deleteConfirmModal').classList.add('hidden');
+                document.getElementById('addAnimeModal').classList.remove('hidden');
+            };
+
+            window.executeDelete = async function() {
+                const id = document.getElementById('editCardId').value;
+                try {
+                    await dbDeleteMission(id);
+                    missionLogs = missionLogs.filter(l => l.id != id);
+                    renderLogs();
+                    // SUCCESS POP-UP
+                    showNotification("MISSION TERMINATED", "error");
+                } catch(err) { console.error(err); }
+                document.getElementById('deleteConfirmModal').classList.add('hidden');
+            };
+
+            document.getElementById('addAnimeForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('saveBtn');
+                btn.innerText = "SAVING...";
+
+                const id = document.getElementById('editCardId').value;
+                const missionData = {
+                    email: currentUser.email,
+                    title: document.getElementById('animeName').value,
+                    ep: document.getElementById('episodesWatched').value || 0,
+                    season: document.getElementById('currentSeason').value || 1,
+                    status: document.getElementById('trackingStatus').value
+                };
+
+                try {
+                    let xpGain = 0;
+                    if (id) {
+                        await dbUpdateMission(id, missionData);
+                        const idx = missionLogs.findIndex(l => l.id == id);
+                        if(idx !== -1) { missionLogs[idx] = { ...missionLogs[idx], ...missionData }; }
+                        xpGain = 100; 
+                    } else {
+                        const newMission = await dbAddMission(missionData);
+                        missionLogs.unshift(newMission);
+                        xpGain = 500;
+                    }
+
+                    // UPDATE XP
+                    currentUser.total_xp = (currentUser.total_xp || 0) + xpGain;
+                    await dbUpdateProgress(currentUser.email, currentUser.total_xp, currentUser.level);
+
+                    renderLogs();
+                    showNotification("DATA SECURED");
+                    closeModal();
+                } catch(err) {
+                    console.error(err);
+                    showNotification("SAVE FAILED", "error");
+                } finally {
+                    btn.innerText = "CONFIRM ENTRY";
+                }
+            });
+
+            document.getElementById('logout-btn').addEventListener('click', () => { 
+                localStorage.setItem('isLoggedIn', 'false'); 
+                window.location.href = 'index.html'; 
+            });
+        });
+    </script>
+</body>
+</html>

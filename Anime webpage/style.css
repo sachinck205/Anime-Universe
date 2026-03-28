@@ -1,0 +1,291 @@
+/*
+================================================
+ANIME UNIVERSE - SHARED STYLESHEET
+================================================
+*/
+
+/* --- Google Fonts Import --- */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap');
+
+/*
+--- Base & Typography ---
+- Sets up the default styles for the entire site.
+- Uses a dark theme and smooth fonts.
+*/
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #0a0a0a;
+    color: #f1f1f1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden; /* Prevents horizontal scroll */
+}
+
+.font-bebas {
+    font-family: 'Bebas Neue', sans-serif;
+}
+
+/*
+--- Global Helper Classes ---
+- Reusable classes for effects like glows.
+*/
+.text-glow {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.btn-glow {
+    box-shadow: 0 0 5px #f59e0b, 0 0 15px #f59e0b;
+    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.btn-glow:hover {
+    box-shadow: 0 0 10px #f59e0b, 0 0 25px #f59e0b, 0 0 40px #f59e0b;
+}
+
+/*
+--- Custom Scrollbar ---
+- A styled scrollbar that matches the site's theme.
+*/
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f172a; /* A dark blue-gray */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #f59e0b; /* Amber color */
+    border-radius: 5px;
+    border: 2px solid #0f172a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #fbbf24; /* Lighter amber on hover */
+}
+
+/* --- Glowing Button Styles --- */
+
+/* 1. Positioning the Buttons */
+.auth-buttons {
+    /* Use 'absolute' to position them based on the header or body */
+    top: 100px; /* Adjust this value to position them below your main nav */
+    right: 20px;
+    z-index: 999;
+    
+    display: flex;
+    gap: 15px; /* Increase space between Login and Sign Up for clarity */
+}
+
+/* 2. Base Style for Glowing Buttons */
+.glowing-btn {
+    padding: 10px 20px; /* Makes the buttons bigger */
+    border: none;
+    border-radius: 6px; /* Slightly rounded corners */
+    font-weight: bold;
+    text-decoration: none; 
+    cursor: pointer;
+    text-transform: uppercase; /* Makes the text stand out */
+    
+    /* Crucial for the glow */
+    transition: all 0.3s ease-in-out;
+}
+
+/* 3. Style for the Login Button (Orange Glow) */
+.login-btn {
+    background-color: #FFA500; 
+    color: #000; 
+    
+    /* The Glow Effect - THIS is what creates the "glowing" look */
+    box-shadow: 0 0 12px #FF8C00, 
+                0 0 25px #FF8C00; 
+}
+
+.login-btn:hover {
+    /* Stronger glow on hover */
+    box-shadow: 0 0 18px #FFA500,
+                0 0 40px #FF8C00;
+}
+
+/* 4. Style for the Sign Up Button (White/Neon Glow) */
+.signup-btn {
+    background-color: #FFF; 
+    color: #000; 
+    
+    /* The Glow Effect */
+    box-shadow: 0 0 12px #FFF, 
+                0 0 25px #B0E0E6; /* Neon Blue/Cyan for contrast */
+}
+
+.signup-btn:hover {
+    /* Stronger glow on hover */
+    box-shadow: 0 0 18px #FFF,
+                0 0 40px #B0E0E6;
+}
+
+/*
+================================================
+HOMEPAGE SPECIFIC STYLES (`index.html`)
+================================================
+*/
+
+/* --- Hero Section --- */
+.hero-section {
+    background-image: url('https://placehold.co/1920x1080/000000/FFFFFF?text=Anime+Collage');
+    background-size: cover;
+    background-position: center 70%;
+    background-attachment: fixed; /* Creates the parallax effect */
+}
+
+/* --- Featured Anime Cards --- */
+.card {
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid transparent;
+}
+
+.card:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.card-img-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 15%, rgba(0,0,0,0) 70%);
+    transition: background 0.4s ease;
+}
+
+.card-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.5rem;
+    transform: translateY(calc(100% - 80px)); /* Keep title visible */
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: white;
+}
+
+.card:hover .card-content {
+    transform: translateY(0);
+}
+
+.card-title {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.card:hover .card-title {
+    transform: translateY(-100px); /* Move title up to make space for content */
+    opacity: 0;
+}
+
+.card-explore-text {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.3s ease 0.2s, transform 0.3s ease 0.2s;
+}
+
+.card:hover .card-explore-text {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/*
+================================================
+ANIME DETAIL PAGE STYLES (for naruto.html, etc.)
+================================================
+*/
+
+/* --- Parallax Hero for Anime Pages --- */
+.anime-hero {
+    padding-top: 12rem;
+    padding-bottom: 6rem;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* Parallax effect */
+    position: relative;
+}
+
+/* Dark overlay for better text readability */
+.anime-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(10, 10, 10, 1) 0%, rgba(0, 0, 0, 0.8) 50%, rgba(0, 0, 0, 0.6) 100%);
+    z-index: 1;
+}
+
+/* Ensure content is above the overlay */
+.anime-hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* --- Section Styling --- */
+.content-section {
+    border-bottom: 1px solid #1f2937; /* Dark gray border */
+}
+
+/* --- Character Card Styles --- */
+.character-card {
+    background-color: #111827; /* Dark blue-gray */
+    border: 1px solid #1f2937;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+}
+
+.character-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+    border-color: #f59e0b; /* Highlight with amber on hover */
+}
+
+.character-card .character-img-container {
+    overflow: hidden;
+    aspect-ratio: 4 / 5;
+}
+
+.character-card img {
+    transition: transform 0.4s ease;
+}
+
+.character-card:hover img {
+    transform: scale(1.05);
+}
+
+/* --- Gallery Image Styles --- */
+.gallery-item {
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.gallery-item img {
+    transition: transform 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.gallery-item:hover img {
+    transform: scale(1.1);
+}
+
+/* --- Specific Anime Theme Colors (as variables) --- */
+:root {
+    --naruto-color: #f97316;
+    --bleach-color: #38bdf8;
+    --jujutsu-kaisen-color: #be185d;
+    --one-piece-color: #ef4444;
+    --demon-slayer-color: #10b981;
+    --solo-leveling-color:#A480F2;
+}

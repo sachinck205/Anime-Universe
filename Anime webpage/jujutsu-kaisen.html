@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Jujutsu Kaisen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        action: {
+                            DEFAULT: '#be185d', // Cursed Energy Pink
+                            dark: '#9d174d'
+                        },
+                    },
+                    animation: {
+                        'slow-zoom': 'zoom 20s infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        zoom: {
+                            '0%': { transform: 'scale(1)' },
+                            '100%': { transform: 'scale(1.1)' },
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --primary: #be185d; /* Cursed Energy Pink */
+            --bg-dark: #050505;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                linear-gradient(rgba(190, 24, 93, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(190, 24, 93, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            color: #f1f1f1;
+            overflow-x: hidden;
+            min-height: 100vh;
+            cursor: default; 
+        }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+
+        /* --- ACTION THEME UTILITIES --- */
+        .action-skew {
+            transform: skew(-10deg);
+            transition: all 0.3s ease;
+        }
+        .action-skew:hover {
+            transform: skew(-10deg) scale(1.05);
+            box-shadow: -4px 4px 0px var(--primary);
+        }
+        .action-skew:active, .card:active, button:active, a:active {
+            transform: scale(0.98) skew(-10deg);
+            filter: brightness(0.9);
+        }
+
+        /* --- 3D TILT CARD STYLES --- */
+        .card {
+            transition: transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(20, 20, 20, 0.6);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px -10px rgba(190, 24, 93, 0.3);
+            z-index: 10;
+        }
+
+        /* --- SCROLL REVEAL UTILITIES --- */
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .stagger-1 { transition-delay: 100ms; }
+        .stagger-2 { transition-delay: 200ms; }
+        .stagger-3 { transition-delay: 300ms; }
+        .stagger-4 { transition-delay: 400ms; }
+
+        /* --- PAGE SPECIFIC ANIMATIONS --- */
+        .cursed-bg {
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, #000000 0%, #1a0510 25%, #380816 50%, #1a0510 75%, #000000 100%);
+            background-size: 400% 400%;
+            animation: chakraFlow 15s ease infinite; z-index: 0;
+        }
+        @keyframes chakraFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .ember-particle {
+            position: absolute; bottom: -20px; width: 4px; height: 4px;
+            background: var(--primary); border-radius: 50%;
+            box-shadow: 0 0 15px var(--primary);
+            animation: floatUp 7s linear infinite; opacity: 0; filter: blur(1px);
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            10% { opacity: 1; }
+            80% { opacity: 0.8; }
+            100% { transform: translateY(-90vh) scale(1.5) rotate(180deg); opacity: 0; }
+        }
+        
+        /* Timeline Line */
+        .timeline-line {
+            position: absolute; left: 24px; top: 0; bottom: 0; width: 2px;
+            background: linear-gradient(to bottom, transparent, var(--primary), transparent);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        @media (min-width: 768px) { .timeline-line { left: 50%; transform: translateX(-50%); } }
+
+        /* --- LOGIN MODAL POPUP --- */
+        #login-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(5px);
+            z-index: 10000; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        #login-modal.active { display: flex; opacity: 1; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white selection:bg-action selection:text-white antialiased">
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playBeep(type = 'click') {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                // ANIME UI SOUND
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1000, now); 
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'hover') {
+                // HOVER SOUND
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(2000, now);
+                osc.frequency.exponentialRampToValueAtTime(1500, now + 0.05);
+                gain.gain.setValueAtTime(0.05, now); 
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = document.querySelectorAll('button, a, .card, .action-skew, .info-card, .tilt-card');
+            elements.forEach(el => {
+                el.addEventListener('click', () => playBeep('click'));
+                el.addEventListener('mouseenter', () => playBeep('hover'));
+            });
+        });
+    </script>
+
+    <div id="login-modal">
+        <div class="bg-black border border-action p-10 max-w-sm w-full text-center shadow-[0_0_50px_rgba(190,24,93,0.2)] relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-action"></div>
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-action transition hover:rotate-90 duration-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="w-16 h-16 bg-action/10 flex items-center justify-center mx-auto mb-6 border border-action/50 action-skew">
+                <i class="fas fa-biohazard text-action text-2xl transform skew-x-10"></i>
+            </div>
+            <h3 class="text-3xl font-bebas tracking-widest mb-4 text-white italic">ACCESS RESTRICTED</h3>
+            <p class="text-gray-500 text-xs mb-8 uppercase tracking-widest">Authentication required for Jujutsu High.</p>
+            <div class="flex flex-col gap-4">
+                <a href="login.html" class="bg-action text-white font-black py-3 action-skew text-sm uppercase tracking-wider hover:bg-white hover:text-black transition">Sign In</a>
+                <a href="signup.html" class="bg-transparent text-white font-bold py-3 action-skew text-sm uppercase tracking-wider border border-white/20 hover:border-action transition">Create Account</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-white/10 bg-black/90 backdrop-blur-md" id="main-header">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">ANIME <span class="text-action">UNIVERSE</span></a>
+            
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="#overview" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Overview</a>
+                <a href="#stats" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Data</a>
+                <a href="#characters" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Sorcerers</a>
+                <a href="#arcs" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Incidents</a>
+            </nav>
+
+            <div id="auth-buttons" class="flex items-center space-x-4">
+                <a href="index.html" class="text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition mr-2"><i class="fas fa-arrow-left"></i> Home</a>
+                <a id="login-btn" href="login.html" class="text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition">Login</a>
+                <a id="signup-btn" href="signup.html" class="bg-action text-white font-black py-2 px-6 action-skew text-xs uppercase tracking-widest hover:bg-white hover:text-black transition duration-300">Join</a>
+                <a id="profile-btn" href="dashboard.html" class="bg-white/10 text-white font-bold py-2 px-4 action-skew text-xs uppercase tracking-wider hover:bg-action transition hidden"><i class="fas fa-user-circle mr-2 transform skew-x-10"></i>Profile</a>
+                <a id="logout-btn" href="#" class="text-red-600 hover:text-red-400 font-bold text-xs uppercase tracking-wider hidden">Logout</a>
+            </div>
+            <button class="md:hidden text-white hover:text-action transition"><i class="fas fa-bars text-2xl"></i></button>
+        </div>
+    </header>
+
+    <section id="overview" class="relative w-full h-[85vh] flex items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+        <div class="cursed-bg opacity-30"></div>
+        <div id="hero-embers" class="absolute inset-0 pointer-events-none z-10"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-[#050505]/80 z-20"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] z-20"></div>
+
+        <div class="relative z-30 container mx-auto px-6 text-center">
+            <span class="block text-action font-bold tracking-[0.5em] uppercase text-sm mb-4 animate-pulse">Subject: Special Grade</span>
+            <h1 class="reveal-on-scroll stagger-1 text-7xl md:text-9xl font-bebas text-white uppercase tracking-tighter leading-none mb-6">
+                King of <span class="text-action italic">Curses</span>
+            </h1>
+            <p class="reveal-on-scroll stagger-2 max-w-3xl mx-auto text-xl text-gray-400 font-light leading-relaxed mb-10">
+                In a world where Cursed Spirits feed on humans, Yuji Itadori consumes the finger of Ryomen Sukuna, intertwining his fate with the legendary King of Curses.
+            </p>
+
+            <div id="stats" class="reveal-on-scroll stagger-3 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                <div class="card p-4 tilt-card group">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold group-hover:text-action transition-colors">Creator</p>
+                    <p class="text-lg text-white font-bebas tracking-wide">Gege Akutami</p>
+                </div>
+                <div class="card p-4 tilt-card group">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold group-hover:text-action transition-colors">Original Run</p>
+                    <p class="text-lg text-white font-bebas tracking-wide">2018 - Present</p>
+                </div>
+                <div class="card p-4 tilt-card group">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold group-hover:text-action transition-colors">Episodes</p>
+                    <p class="text-lg text-white font-bebas tracking-wide">47+ (Ongoing)</p>
+                </div>
+                <div class="card p-4 tilt-card group">
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold group-hover:text-action transition-colors">Status</p>
+                    <p class="text-lg text-action font-bebas tracking-wide">Critical</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main class="relative z-10">
+        <section class="py-24 relative overflow-hidden bg-[#050505]">
+            <div class="container mx-auto px-6 relative z-10">
+                <div class="flex flex-col md:flex-row gap-12 items-center reveal-on-scroll">
+                    <div class="md:w-1/2">
+                        <div class="card tilt-card p-1 group max-w-md mx-auto">
+                            <img src="yuji.jpg" alt="Yuji Itadori" class="w-full object-cover grayscale group-hover:grayscale-0 transition duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                            </div>
+                    </div>
+                    <div class="md:w-1/2">
+                        <h2 class="text-5xl font-bebas text-white mb-6 italic">A Binding <span class="text-action">Vow</span></h2>
+                        <div class="space-y-6 text-gray-400 text-sm leading-relaxed font-mono">
+                            <p>Yuji Itadori is a high school student with extraordinary physical abilities. His life takes a sudden turn when he encounters Megumi Fushiguro and unseals a high-grade cursed object to save his friends.</p>
+                            <p>To defeat the curses, Yuji makes a fateful decision: he swallows the rotting finger and becomes the host for Ryomen Sukuna. Captured by Satoru Gojo, he is given a choice: be executed now, or consume all of Sukuna's fingers and die taking the Curse King with him.</p>
+                            <div class="flex items-center gap-4 mt-6">
+                                <div class="h-0.5 flex-1 bg-white/10 rounded overflow-hidden">
+                                    <div class="h-full bg-action w-1/3 animate-pulse"></div>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-action animate-pulse">Curse Level: Special</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="characters" class="py-24 border-y border-white/5 relative">
+            <div class="container mx-auto px-6 relative z-10">
+                <div class="text-center mb-16 reveal-on-scroll">
+                    <h2 class="text-5xl font-bebas tracking-wide text-white italic">Jujutsu <span class="text-action">Sorcerers</span></h2>
+                    <p class="text-gray-500 mt-2 uppercase tracking-widest text-xs">The guardians against the Cursed Spirits</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 reveal-on-scroll stagger-1">
+                    <div class="card tilt-card p-8 text-center group cursor-pointer">
+                        <div class="w-16 h-16 mx-auto bg-action/10 border border-action/50 flex items-center justify-center text-2xl text-action mb-6 action-skew">
+                            <i class="fas fa-fist-raised"></i>
+                        </div>
+                        <h4 class="text-2xl font-bebas text-white mb-1">Yuji Itadori</h4>
+                        <p class="text-action text-[10px] font-bold uppercase tracking-widest mb-4">Sukuna's Vessel</p>
+                        <p class="text-gray-400 text-xs font-mono">A kind-hearted boy with immense physical power, determined to give people "proper deaths."</p>
+                    </div>
+                    <div class="card tilt-card p-8 text-center group cursor-pointer">
+                        <div class="w-16 h-16 mx-auto bg-cyan-800/10 border border-cyan-800/50 flex items-center justify-center text-2xl text-cyan-800 mb-6 action-skew">
+                            <i class="fas fa-dog"></i>
+                        </div>
+                        <h4 class="text-2xl font-bebas text-white mb-1">Megumi</h4>
+                        <p class="text-cyan-800 text-[10px] font-bold uppercase tracking-widest mb-4">Ten Shadows</p>
+                        <p class="text-gray-400 text-xs font-mono">A stoic sorcerer from the Zenin clan who believes in saving only good people.</p>
+                    </div>
+                    <div class="card tilt-card p-8 text-center group cursor-pointer">
+                        <div class="w-16 h-16 mx-auto bg-orange-600/10 border border-orange-600/50 flex items-center justify-center text-2xl text-orange-600 mb-6 action-skew">
+                            <i class="fas fa-hammer"></i>
+                        </div>
+                        <h4 class="text-2xl font-bebas text-white mb-1">Nobara</h4>
+                        <p class="text-orange-600 text-[10px] font-bold uppercase tracking-widest mb-4">Straw Doll</p>
+                        <p class="text-gray-400 text-xs font-mono">A confident sorcerer from the countryside with an unshakeable will and unique technique.</p>
+                    </div>
+                    <div class="card tilt-card p-8 text-center group cursor-pointer">
+                        <div class="w-16 h-16 mx-auto bg-cyan-300/10 border border-cyan-300/50 flex items-center justify-center text-2xl text-cyan-300 mb-6 action-skew">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <h4 class="text-2xl font-bebas text-white mb-1">Satoru Gojo</h4>
+                        <p class="text-cyan-300 text-[10px] font-bold uppercase tracking-widest mb-4">The Strongest</p>
+                        <p class="text-gray-400 text-xs font-mono">The charismatic teacher possessing the rare Six Eyes and Limitless techniques.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="arcs" class="py-24 relative">
+            <div class="container mx-auto px-6">
+                <h2 class="text-4xl font-bebas text-white text-center mb-16 reveal-on-scroll italic">Major <span class="text-action">Incidents</span></h2>
+                <div class="relative max-w-4xl mx-auto">
+                    <div class="timeline-line"></div>
+                    
+                    <div class="relative mb-12 pl-12 md:pl-0 flex flex-col md:flex-row items-center gap-8 reveal-on-scroll stagger-1 group">
+                        <div class="w-full md:w-1/2 md:text-right md:pr-8">
+                            <h3 class="text-2xl font-bebas text-white group-hover:text-action transition-colors">Fearsome Womb</h3>
+                            <p class="text-action font-mono text-[10px] mb-2 uppercase tracking-widest">Detention Center</p>
+                            <p class="text-gray-400 text-xs">First-years investigate a Cursed Womb, leading to a tragic encounter with a Special Grade Curse.</p>
+                        </div>
+                        <div class="absolute left-[23px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 bg-black rounded-full border-2 border-action z-10 shadow-[0_0_10px_rgba(190,24,93,0.5)]"></div>
+                        <div class="w-full md:w-1/2 md:pl-8 hidden md:block"><div class="h-px w-12 bg-white/10"></div></div>
+                    </div>
+
+                    <div class="relative mb-12 pl-12 md:pl-0 flex flex-col md:flex-row items-center gap-8 reveal-on-scroll stagger-2 group">
+                        <div class="w-full md:w-1/2 md:pr-8 hidden md:block text-right"><div class="h-px w-12 bg-white/10 ml-auto"></div></div>
+                        <div class="absolute left-[23px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 bg-black rounded-full border-2 border-indigo-500 z-10 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                        <div class="w-full md:w-1/2 md:pl-8">
+                            <h3 class="text-2xl font-bebas text-white group-hover:text-indigo-400 transition-colors">Goodwill Event</h3>
+                            <p class="text-indigo-500 font-mono text-[10px] mb-2 uppercase tracking-widest">Sister School Exchange</p>
+                            <p class="text-gray-400 text-xs">The competition between Tokyo and Kyoto schools is interrupted by an invasion of high-level Curses.</p>
+                        </div>
+                    </div>
+
+                    <div class="relative mb-12 pl-12 md:pl-0 flex flex-col md:flex-row items-center gap-8 reveal-on-scroll stagger-3 group">
+                        <div class="w-full md:w-1/2 md:text-right md:pr-8">
+                            <h3 class="text-2xl font-bebas text-white group-hover:text-cyan-500 transition-colors">Hidden Inventory</h3>
+                            <p class="text-cyan-500 font-mono text-[10px] mb-2 uppercase tracking-widest">Gojo's Past</p>
+                            <p class="text-gray-400 text-xs">A look into the past of Satoru Gojo and Suguru Geto, detailing the mission that drove them apart.</p>
+                        </div>
+                        <div class="absolute left-[23px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 bg-black rounded-full border-2 border-cyan-500 z-10 shadow-[0_0_10px_rgba(6,182,212,0.5)]"></div>
+                        <div class="w-full md:w-1/2 md:pl-8 hidden md:block"><div class="h-px w-12 bg-white/10"></div></div>
+                    </div>
+
+                    <div class="relative pl-12 md:pl-0 flex flex-col md:flex-row items-center gap-8 reveal-on-scroll stagger-4 group">
+                        <div class="w-full md:w-1/2 md:pr-8 hidden md:block text-right"><div class="h-px w-12 bg-white/10 ml-auto"></div></div>
+                        <div class="absolute left-[23px] md:left-1/2 md:-translate-x-1/2 w-4 h-4 bg-black rounded-full border-2 border-purple-500 z-10 shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>
+                        <div class="w-full md:w-1/2 md:pl-8">
+                            <h3 class="text-2xl font-bebas text-white group-hover:text-purple-400 transition-colors">Shibuya Incident</h3>
+                            <p class="text-purple-500 font-mono text-[10px] mb-2 uppercase tracking-widest">October 31st</p>
+                            <p class="text-gray-400 text-xs">A master plan is enacted to seal Satoru Gojo in Shibuya, resulting in a city-wide battle with catastrophic consequences.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="space-y-6">
+                    <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                    <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate destination for Jujutsu Sorcery.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                        <li><a href="#Trending" class="hover:text-action transition-colors">Trending Now</a></li>
+                        <li><a href="#genres" class="hover:text-action transition-colors">Browse Genres</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Join the School</h4>
+                    <form class="relative mt-4">
+                        <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                        <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                <p>&copy; 2026 Anime Universe.</p>
+                <div class="flex space-x-6">
+                    <span>Curtain: <span class="text-action">Down</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            /* 1. HERO EMBERS */
+            const embersContainer = document.getElementById('hero-embers');
+            const emberCount = 40; 
+            for(let i=0; i<emberCount; i++){
+                const ember = document.createElement('div');
+                ember.classList.add('ember-particle');
+                ember.style.left = Math.random() * 100 + '%';
+                ember.style.animationDuration = (Math.random() * 4 + 3) + 's';
+                ember.style.animationDelay = Math.random() * 3 + 's';
+                embersContainer.appendChild(ember);
+            }
+
+            /* 2. AUTH LOGIC */
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const loginBtn = document.getElementById('login-btn');
+            const signupBtn = document.getElementById('signup-btn');
+            const profileBtn = document.getElementById('profile-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+
+            if (isLoggedIn) {
+                if (loginBtn) loginBtn.classList.add('hidden');
+                if (signupBtn) signupBtn.classList.add('hidden');
+                if (profileBtn) profileBtn.classList.remove('hidden');
+                if (logoutBtn) logoutBtn.classList.remove('hidden');
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    localStorage.setItem('isLoggedIn', 'false');
+                    window.location.reload(); 
+                });
+            }
+
+            /* 3. MODAL LOGIC */
+            window.closeModal = function() {
+                const loginModal = document.getElementById('login-modal');
+                loginModal.classList.remove('active');
+                setTimeout(() => { loginModal.style.display = 'none'; }, 300);
+            };
+
+            /* 4. SCROLL HEADER */
+            const header = document.getElementById('main-header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('py-2');
+                    header.classList.remove('py-4');
+                } else {
+                    header.classList.add('py-4');
+                    header.classList.remove('py-2');
+                }
+            });
+
+            /* 5. 3D TILT EFFECT */
+            const tiltCards = document.querySelectorAll('.tilt-card');
+            tiltCards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = ((y - centerY) / centerY) * -10; 
+                    const rotateY = ((x - centerX) / centerX) * 10;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                });
+            });
+
+            /* 6. SCROLL REVEAL */
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal-on-scroll').forEach((el) => observer.observe(el));
+        });
+    </script>
+</body>
+</html> 

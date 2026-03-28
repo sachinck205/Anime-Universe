@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="anime-db.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        action: { DEFAULT: '#ff4d00', dark: '#cc3d00' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #050505;
+            background-image: 
+                linear-gradient(rgba(255, 77, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 77, 0, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            color: #f1f1f1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        
+        .action-skew {
+            transform: skew(-10deg);
+            transition: all 0.3s ease;
+        }
+        .action-skew:hover {
+            transform: skew(-10deg) scale(1.02);
+            box-shadow: -4px 4px 0px #ff4d00;
+        }
+
+        .login-card {
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .input-field {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #ff4d00;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+            <a href="index.html" class="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-white transition">Back to Home</a>
+        </div>
+    </header>
+
+    <div class="flex-1 flex items-center justify-center p-4 pt-24">
+        <div class="login-card p-10 w-full max-w-md relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-action"></div>
+
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-bebas text-white tracking-widest italic">Member <span class="text-action">Login</span></h2>
+                <p class="text-xs text-gray-500 mt-2 uppercase tracking-widest">Enter Credentials</p>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-6"> 
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
+                    <input type="email" id="login-email" class="input-field w-full p-3 text-sm" placeholder="name@example.com" required> 
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
+                    <input type="password" id="login-password" class="input-field w-full p-3 text-sm" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" id="login-btn" class="w-full bg-action text-white font-black py-4 uppercase tracking-[0.2em] action-skew mt-4 hover:bg-white hover:text-black transition-colors text-sm">
+                    Access Account
+                </button>
+                
+                <p id="login-error" class="text-red-500 text-xs text-center font-mono mt-4 hidden">
+                    Invalid email or password.
+                </p>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-white/10 text-center">
+                <p class="text-xs text-gray-500 mb-4">Don't have an account?</p>
+                <a href="signup.html" class="text-xs font-bold uppercase tracking-widest text-white hover:text-action border border-white/20 px-6 py-2 hover:border-action transition-all">
+                    Create Profile
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="space-y-6">
+                    <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                    <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                        <li><a href="#Trending" class="hover:text-action transition-colors">Trending Now</a></li>
+                        <li><a href="#genres" class="hover:text-action transition-colors">Browse Genres</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                    <form class="relative mt-4">
+                        <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                        <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                <p>&copy; 2026 Anime Universe.</p>
+                <div class="flex space-x-6">
+                    <span>System Status: <span class="text-action">Operational</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            // Get input values
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorElement = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+            
+            // UI Feedback
+            const originalText = "ACCESS ACCOUNT";
+            btn.textContent = "AUTHENTICATING...";
+            btn.disabled = true;
+            errorElement.classList.add('hidden');
+
+            try {
+                // 1. Call Database Function (replaces localStorage search)
+                // This will query Supabase and verify credentials
+                await dbLogin(email, password);
+
+                // 2. Success - Redirect to Dashboard
+                window.location.href = 'dashboard.html';
+
+            } catch (error) {
+                // 3. Error - Show message
+                console.error("Login Error:", error);
+                
+                // Add delay for effect (optional) or just show error immediately
+                setTimeout(() => {
+                    errorElement.textContent = "ACCESS DENIED: Invalid email or password.";
+                    errorElement.classList.remove('hidden');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>

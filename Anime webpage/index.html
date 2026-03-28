@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        action: { DEFAULT: '#ff4d00', dark: '#cc3d00' },
+                        amber: { 400: '#ff4d00', 500: '#ff4d00', 600: '#cc3d00' }
+                    },
+                    animation: {
+                        'slow-zoom': 'zoom 20s infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        zoom: { '0%': { transform: 'scale(1)' }, '100%': { transform: 'scale(1.1)' } },
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --primary: #ff4d00; --bg-dark: #050505; }
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-dark); background-image: linear-gradient(rgba(255, 77, 0, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 77, 0, 0.03) 1px, transparent 1px); background-size: 50px 50px; color: #f1f1f1; overflow-x: hidden; min-height: 100vh; cursor: default; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        
+        /* UTILITIES */
+        .action-skew { transform: skew(-10deg); transition: all 0.3s ease; }
+        .action-skew:hover { transform: skew(-10deg) scale(1.05); box-shadow: -4px 4px 0px var(--primary); }
+        .action-skew:active, .card:active, button:active, a:active { transform: scale(0.98) skew(-10deg); filter: brightness(0.9); }
+        .card:active { transform: scale(0.98); }
+        .reveal-on-scroll { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); }
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+        .stagger-1 { transition-delay: 100ms; } .stagger-2 { transition-delay: 200ms; } .stagger-3 { transition-delay: 300ms; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #000; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--primary); }
+
+        /* CARDS */
+        .card { transition: transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease; position: relative; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(20, 20, 20, 0.6); transform-style: preserve-3d; perspective: 1000px; }
+        .card:hover { border-color: var(--primary); box-shadow: 0 10px 30px -10px rgba(255, 77, 0, 0.3); z-index: 10; }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; width: 0; height: 0; border-top: 20px solid var(--primary); border-right: 20px solid transparent; opacity: 0; transition: opacity 0.3s; z-index: 20; }
+        .card:hover::before { opacity: 1; }
+        .card-img-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%); opacity: 0.9; pointer-events: none; }
+        .card-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem; transform: translateY(20px) translateZ(20px); opacity: 0; transition: all 0.3s ease-in-out; pointer-events: none; }
+        .card:hover .card-content { transform: translateY(0) translateZ(20px); opacity: 1; }
+        .card-title { position: absolute; bottom: 1.5rem; left: 1.5rem; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); text-shadow: 0 4px 10px rgba(0,0,0,1); font-style: italic; transform: translateZ(30px); }
+        .card:hover .card-title { bottom: 140px; transform: scale(0.9) translateZ(30px); transform-origin: left bottom; color: var(--primary); }
+
+        /* GENRES */
+        .genre-card { background: rgba(10, 10, 10, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-left: 2px solid var(--genre-color); position: relative; overflow: hidden; transition: all 0.4s ease; transform-style: preserve-3d; }
+        .genre-card:hover { background: rgba(255, 255, 255, 0.03); border-color: var(--genre-color); box-shadow: -5px 0 20px -5px var(--genre-color); }
+        .genre-icon-bg { position: absolute; right: -20px; bottom: -20px; font-size: 8rem; opacity: 0.05; transition: all 0.5s ease; color: var(--genre-color); transform: rotate(-10deg) translateZ(10px); }
+        .genre-card:hover .genre-icon-bg { transform: rotate(0deg) scale(1.1) translateZ(10px); opacity: 0.15; }
+        .tech-line { position: absolute; top: 10px; right: 10px; width: 30px; height: 2px; background: var(--genre-color); opacity: 0.5; }
+
+        /* LOGIN MODAL */
+        #login-modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+        #login-modal.active { display: flex; opacity: 1; }
+
+        /* QUOTES */
+        .quote-container { background: radial-gradient(circle at top right, rgba(30,30,30,0.8), rgba(10,10,10,0.95)); border: 1px solid rgba(255, 255, 255, 0.1); position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.7); }
+        .quote-container::before { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; height: 2px; background: linear-gradient(90deg, transparent, #ff4d00, transparent); animation: scanline 4s linear infinite; }
+        @keyframes scanline { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+        .quote-text { transition: opacity 0.3s ease; } .fade-out { opacity: 0; }
+        
+        /* PARTICLES */
+        canvas#hero-particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white selection:bg-action selection:text-white antialiased">
+
+    <div id="login-modal">
+        <div class="bg-black border border-action p-10 max-w-sm w-full text-center shadow-[0_0_50px_rgba(255,77,0,0.2)] relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-action"></div>
+            <button onclick="document.getElementById('login-modal').classList.remove('active'); setTimeout(()=>document.getElementById('login-modal').style.display='none',300)" class="absolute top-4 right-4 text-gray-500 hover:text-action transition hover:rotate-90 duration-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="w-16 h-16 bg-action/10 flex items-center justify-center mx-auto mb-6 border border-action/50 action-skew">
+                <i class="fas fa-lock text-action text-2xl transform skew-x-10"></i>
+            </div>
+            <h3 class="text-3xl font-bebas tracking-widest mb-4 text-white italic">ACCESS RESTRICTED</h3>
+            <p class="text-gray-500 text-xs mb-8 uppercase tracking-widest">Authentication required for battlefield comms.</p>
+            <div class="flex flex-col gap-4">
+                <a href="login.html" class="bg-action text-white font-black py-3 action-skew text-sm uppercase tracking-wider hover:bg-white hover:text-black transition">Sign In</a>
+                <a href="signup.html" class="bg-transparent text-white font-bold py-3 action-skew text-sm uppercase tracking-wider border border-white/20 hover:border-action transition">Create Account</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-white/10 bg-black/90 backdrop-blur-md" id="main-header">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">ANIME <span class="text-action">UNIVERSE</span></a>
+            
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="#featured" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Featured</a>
+                <a href="#Trending" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Trending</a>
+                <a href="#genres" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Realms</a>
+                <a href="#community" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Arena</a>
+            </nav>
+
+            <div id="auth-buttons" class="flex items-center space-x-4">
+                <a id="login-btn" href="login.html" class="text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition">Login</a>
+                <a id="signup-btn" href="signup.html" class="bg-action text-white font-black py-2 px-6 action-skew text-xs uppercase tracking-widest hover:bg-white hover:text-black transition duration-300">Join</a>
+                <a id="profile-btn" href="dashboard.html" class="bg-white/10 text-white font-bold py-2 px-4 action-skew text-xs uppercase tracking-wider hover:bg-action transition hidden"><i class="fas fa-user-circle mr-2 transform skew-x-10"></i>Profile</a>
+                <button id="logout-btn" class="text-red-600 hover:text-red-400 font-bold text-xs uppercase tracking-wider hidden">Logout</button>
+            </div>
+            <button class="md:hidden text-white hover:text-action transition"><i class="fas fa-bars text-2xl"></i></button>
+        </div>
+    </header>
+
+    <section id="hero" class="relative w-full h-screen flex items-center justify-center overflow-hidden text-center text-white bg-black">
+        <div class="absolute inset-0 bg-[url('https://images4.alphacoders.com/936/936378.jpg')] bg-cover bg-center opacity-40 animate-slow-zoom filter contrast-125 grayscale-[30%]"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/60 to-black/80"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px]"></div>
+
+        <canvas id="hero-particles"></canvas>
+        
+        <div class="relative z-20 px-4 max-w-5xl mx-auto flex flex-col items-center">
+            <span class="block text-action font-bold tracking-[0.5em] uppercase text-sm mb-4 animate-pulse">System Online</span>
+            <h1 class="reveal-on-scroll text-7xl md:text-9xl font-bebas tracking-wider text-white uppercase italic mb-6">
+                Your Story <span class="text-action">Awaits</span>
+            </h1>
+            <p class="reveal-on-scroll stagger-1 text-xl md:text-2xl text-gray-400 font-light max-w-3xl mx-auto leading-relaxed mb-10 tracking-wide">
+                Discover your path, master incredible abilities, and become the hero of your own chronicle.
+            </p>
+            <div class="reveal-on-scroll stagger-2">
+                <a href="#featured" class="inline-flex items-center gap-3 bg-action text-white font-black tracking-[0.2em] uppercase py-4 px-12 text-lg transition-all duration-300 action-skew hover:bg-white hover:text-black">
+                    Start Mission <i class="fas fa-play text-xs ml-1 transform skew-x-10"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <main id="Trending" class="py-24 relative z-10">
+        <div class="container mx-auto px-6">
+            <div class="flex justify-between items-end mb-12 reveal-on-scroll border-b border-white/10 pb-4">
+                <div>
+                    <h2 class="text-5xl font-bebas tracking-wider text-white italic">Trending <span class="text-action">Now</span></h2>
+                    <p class="text-gray-500 mt-2 font-light uppercase tracking-widest text-xs">High Priority Targets</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                <a href="naruto.html" class="reveal-on-scroll stagger-1 card tilt-card h-[400px] block group">
+                    <img src="nmp.jpg" alt="Naruto" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Naruto</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4 line-clamp-3 leading-relaxed">The journey of a young ninja who seeks recognition.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Details</span>
+                    </div>
+                </a>
+                <a href="one-piece.html" class="reveal-on-scroll stagger-2 card tilt-card h-[400px] block group">
+                    <img src="Onepiece.jpg" alt="One Piece" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">One Piece</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4 line-clamp-3">Monkey D. Luffy and his pirate crew.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Details</span>
+                    </div>
+                </a>
+                <a href="bleach.html" class="reveal-on-scroll stagger-3 card tilt-card h-[400px] block group">
+                    <img src="Bleach.jpg" alt="Bleach" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Bleach</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4 line-clamp-3">A high school student gains the powers of a Soul Reaper.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Details</span>
+                    </div>
+                </a>
+                <a href="jujutsu-kaisen.html" class="reveal-on-scroll stagger-1 card tilt-card h-[400px] block group">
+                    <img src="JJK.jpg" alt="Jujutsu Kaisen" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Jujutsu Kaisen</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4 line-clamp-3">A boy swallows a cursed talisman.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Details</span>
+                    </div>
+                </a>
+                <a href="solo-leveling.html" class="reveal-on-scroll stagger-2 card tilt-card h-[400px] block group">
+                    <img src="slpp.jpg" alt="Solo Leveling" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-4xl font-bebas tracking-wider text-white">Solo Leveling</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4 line-clamp-3">The world's weakest hunter levels up.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs border border-action px-3 py-1 hover:bg-action hover:text-white transition">Details</span>
+                    </div>
+                </a>
+            </div>
+        </div>   
+    </main>
+
+    <section class="py-24 border-y border-white/10 relative overflow-hidden bg-black/50">
+        <div class="container mx-auto px-6 text-center max-w-4xl relative z-10 reveal-on-scroll">
+            
+            <div class="mb-10">
+                <h2 class="text-5xl md:text-6xl font-bebas tracking-widest text-white italic">Tactical <span class="text-action">Morale</span></h2>
+                <p class="text-xs text-gray-500 font-mono mt-2 uppercase tracking-[0.3em]">Refuel your spirit. Execute your dreams.</p>
+            </div>
+
+            <div class="quote-container p-10 md:p-14 text-center relative max-w-3xl mx-auto transition-transform hover:scale-[1.01] duration-500">
+                <i class="fas fa-quote-left absolute top-6 left-6 text-3xl text-white/5"></i>
+                <i class="fas fa-quote-right absolute bottom-6 right-6 text-3xl text-white/5"></i>
+
+                <div id="quote-display" class="quote-text flex flex-col justify-center items-center min-h-[120px]">
+                    <h2 id="q-text" class="text-2xl md:text-3xl font-bold leading-relaxed text-white mb-6 italic">
+                        "If you don't take risks, you can't create a future."
+                    </h2>
+                    <div class="border-t border-white/10 pt-4 w-full">
+                        <p id="q-char" class="text-action font-bebas text-xl tracking-widest">Monkey D. Luffy</p>
+                        <p id="q-anime" class="text-[10px] text-gray-500 font-mono uppercase">One Piece</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-center gap-4">
+                    <button id="copy-quote-btn" class="border border-white/10 bg-white/5 text-gray-400 w-12 h-12 flex items-center justify-center hover:bg-white hover:text-black transition" title="Copy to Clipboard">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button id="new-quote-btn" class="bg-action text-white font-bold py-3 px-8 uppercase tracking-widest text-xs hover:bg-white hover:text-black transition border border-action shadow-[0_0_20px_rgba(255,77,0,0.3)]">
+                        <i class="fas fa-sync-alt mr-2"></i> Sync New Intel
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <main id="featured" class="py-24 bg-transparent relative">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 reveal-on-scroll">
+                <h2 class="text-5xl md:text-6xl font-bebas tracking-wider text-white italic">Featured <span class="text-action">Series</span></h2>
+                <div class="flex justify-center mt-4">
+                    <div class="h-1 w-20 bg-action"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">  
+                <a href="naruto.html" class="reveal-on-scroll stagger-1 card tilt-card h-[450px] block group">
+                    <img src="nmp.jpg" alt="Naruto" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas text-white">Naruto</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">The path of the Seventh Hokage.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs">Watch &rarr;</span>
+                    </div>
+                </a>
+
+                <a href="solo-leveling.html" class="reveal-on-scroll stagger-2 card tilt-card h-[450px] block group">
+                    <img src="slpp.jpg" alt="Solo" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas text-white">Solo Leveling</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">From weakest to strongest monarch.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs">Watch &rarr;</span>
+                    </div>
+                </a>           
+
+                <a href="bleach.html" class="reveal-on-scroll stagger-3 card tilt-card h-[450px] block group">
+                    <img src="Bleach.jpg" alt="Bleach" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas text-white">Bleach</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">Powers of a Substitute Shinigami.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs">Watch &rarr;</span>
+                    </div>
+                </a>
+
+                <a href="death-note.html" class="reveal-on-scroll stagger-1 card tilt-card h-[450px] block group">
+                    <img src="dn.jpg" alt="DN" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas text-white">Death Note</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">A high-stakes battle of wits.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs">Watch &rarr;</span>
+                    </div>
+                </a>
+
+                <a href="demon-slayer.html" class="reveal-on-scroll stagger-2 card tilt-card h-[450px] block group">
+                    <img src="Demon.jpg" alt="DS" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas text-white">Demon Slayer</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-sm mb-4">The Hinokami Kagura shines.</p>
+                        <span class="font-bold text-action uppercase tracking-widest text-xs">Watch &rarr;</span>
+                    </div>
+                </a>
+            </div>
+        </div>   
+    </main> 
+    
+    <section id="genres" class="relative py-24 bg-transparent overflow-hidden">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="flex flex-row justify-between items-center mb-16 border-b border-white/10 pb-6 reveal-on-scroll">
+                <div>
+                    <h2 class="text-5xl md:text-6xl font-bebas tracking-widest text-white italic">
+                        Access <span class="text-action">Realms</span>
+                    </h2>
+                    <p class="text-xs text-gray-500 font-mono mt-2">SELECT DATA STREAM //</p>
+                </div>
+                <a href="#" class="group flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-colors">
+                    Full Archive <i class="fas fa-database transform group-hover:rotate-12 transition-transform"></i>
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <a href="action.html" class="reveal-on-scroll stagger-1 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #ef4444;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-fist-raised genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-01</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-red-500 transition-colors">Action</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">High Octane Combat</p>
+                    </div>
+                </a>
+
+                <a href="shonen.html" class="reveal-on-scroll stagger-2 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #f59e0b;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-fire genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-02</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-amber-500 transition-colors">Shonen</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Power & Legacy</p>
+                    </div>
+                </a>
+
+                <a href="fantasy.html" class="reveal-on-scroll stagger-3 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #a855f7;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-dragon genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-03</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-purple-500 transition-colors">Fantasy</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Arcane Worlds</p>
+                    </div>
+                </a>
+
+                <a href="romance.html" class="reveal-on-scroll stagger-1 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #ec4899;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-heart genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-04</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-pink-500 transition-colors">Romance</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Emotional Bonds</p>
+                    </div>
+                </a>
+
+                <a href="sports.html" class="reveal-on-scroll stagger-2 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #3b82f6;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-medal genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-05</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-blue-500 transition-colors">Sports</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Competitive League</p>
+                    </div>
+                </a>
+
+                <a href="slice-of-life.html" class="reveal-on-scroll stagger-3 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #10b981;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-coffee genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-06</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-emerald-500 transition-colors">Slice of Life</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Daily Logs</p>
+                    </div>
+                </a>
+
+                 <a href="isekai.html" class="reveal-on-scroll stagger-1 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #06b6d4;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-meteor genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-07</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-cyan-500 transition-colors">Isekai</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Dimension Jump</p>
+                    </div>
+                </a>
+
+                 <a href="sci-fi.html" class="reveal-on-scroll stagger-2 genre-card tilt-card h-48 p-6 flex flex-col justify-between group" style="--genre-color: #6366f1;">
+                    <div class="tech-line"></div>
+                    <i class="fas fa-robot genre-icon-bg"></i>
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] text-gray-400 font-mono border border-gray-700 px-2 py-0.5 rounded-sm">SEC-08</span>
+                    </div>
+                    <div>
+                        <h3 class="text-3xl font-bebas text-white italic group-hover:text-indigo-500 transition-colors">Sci-Fi</h3>
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1 group-hover:text-white transition-colors">Future Tech</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="community" class="py-24 bg-transparent relative overflow-hidden">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="text-center mb-12 reveal-on-scroll">
+                <h2 class="text-6xl font-bebas tracking-wider text-white italic">Weeb <span class="text-action">Arena</span></h2>
+                <p class="text-gray-500 mt-2 font-bold tracking-[0.3em] uppercase text-xs">Battlefield Comms Center</p>
+            </div>
+
+            <div class="max-w-6xl mx-auto mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 reveal-on-scroll">
+                <div class="bg-black/80 border border-white/10 p-6 flex items-center justify-between action-skew group cursor-default">
+                    <div>
+                        <h4 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">Active Operatives</h4>
+                        <span id="stat-active-users" class="text-3xl font-bebas text-white group-hover:text-action transition-colors">--</span>
+                    </div>
+                    <i class="fas fa-users text-2xl text-white/20 group-hover:text-action transition-colors"></i>
+                </div>
+
+                <div class="bg-black/80 border border-white/10 p-6 flex items-center justify-between action-skew group cursor-default">
+                    <div>
+                        <h4 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">Server Latency</h4>
+                        <span id="stat-latency" class="text-3xl font-bebas text-white group-hover:text-action transition-colors">-- ms</span>
+                    </div>
+                    <i class="fas fa-network-wired text-2xl text-white/20 group-hover:text-action transition-colors"></i>
+                </div>
+
+                <div class="bg-black/80 border border-white/10 p-6 flex items-center justify-between action-skew group cursor-default">
+                    <div>
+                        <h4 class="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">Encrypted Channels</h4>
+                        <span class="text-3xl font-bebas text-white group-hover:text-action transition-colors">84</span>
+                    </div>
+                    <i class="fas fa-lock text-2xl text-white/20 group-hover:text-action transition-colors"></i>
+                </div>
+            </div>
+            
+            <div class="max-w-6xl mx-auto bg-black/80 border border-white/10 flex flex-col md:flex-row h-[700px] shadow-[0_0_60px_-15px_rgba(255,77,0,0.2)] reveal-on-scroll">
+                
+                <div class="flex-1 flex flex-col border-r border-white/10">
+                    <div class="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 bg-action animate-pulse"></div>
+                            <span class="text-xs font-bold uppercase tracking-widest text-white">Global Frequency</span>
+                        </div>
+                        <span id="user-count" class="text-[10px] text-gray-500 font-mono">CONNECTING...</span>
+                    </div>
+
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth custom-scrollbar bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImEiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgNDBWMGg0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=')]">
+                        
+                        <div class="flex justify-center my-4">
+                            <span class="text-[10px] text-gray-600 bg-white/5 px-3 py-1 uppercase tracking-widest border border-white/5">Encrypted Connection Established</span>
+                        </div>
+                        </div>
+
+                    <div class="p-4 bg-black border-t border-white/10">
+                        <form id="pro-chat-form" class="relative">
+                            <div class="flex items-center gap-4 bg-white/5 border border-white/10 p-2 pl-4 focus-within:border-action transition-all duration-300">
+                                <i class="fas fa-chevron-right text-action text-xs"></i>
+                                <input type="text" id="chat-input" placeholder="Enter transmission..." 
+                                       class="flex-1 bg-transparent border-none py-2 text-white text-sm focus:outline-none font-mono placeholder:text-gray-700">
+                                <button type="submit" class="bg-action text-black font-bold px-4 py-2 uppercase text-[10px] tracking-widest hover:bg-white transition-colors">
+                                    SEND
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="w-full md:w-64 bg-black/40 flex flex-col">
+                    <div class="p-4 border-b border-white/10 bg-white/5">
+                        <h4 class="text-xs font-bold uppercase tracking-widest text-white">Active Units</h4>
+                    </div>
+                    <div id="active-units-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                        </div>
+                    <div class="p-4 border-t border-white/10">
+                        <div class="text-[10px] text-gray-600 font-mono text-center">SERVER: TOKYO-3</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="space-y-6">
+                    <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                    <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                        <li><a href="#Trending" class="hover:text-action transition-colors">Trending Now</a></li>
+                        <li><a href="#genres" class="hover:text-action transition-colors">Browse Genres</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                        <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                    <form class="relative mt-4">
+                        <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                        <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                <p>&copy; 2026 Anime Universe.</p>
+                <div class="flex space-x-6">
+                    <span>System Status: <span class="text-action">Operational</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="anime-db.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Simulate Latency Check
+            const start = Date.now();
+            await new Promise(r => setTimeout(r, Math.random() * 50 + 20)); // Fake network delay
+            const latency = Date.now() - start;
+            const latencyEl = document.getElementById('stat-latency');
+            if(latencyEl) latencyEl.innerText = latency + " ms";
+
+            // 2. Fetch Active Users (Public Count)
+            const userCountEl = document.getElementById('stat-active-users');
+            if(userCountEl && typeof db !== 'undefined') {
+                try {
+                    // Try to get exact count from public 'users' table
+                    const { count, error } = await db.from('users').select('*', { count: 'exact', head: true });
+                    
+                    if (!error && count !== null) {
+                        // Animate the number counting up
+                        let current = 0;
+                        const increment = Math.ceil(count / 20);
+                        const timer = setInterval(() => {
+                            current += increment;
+                            if(current >= count) {
+                                current = count;
+                                clearInterval(timer);
+                            }
+                            userCountEl.innerText = current.toLocaleString();
+                        }, 50);
+                    } else {
+                        // Fallback to a "cool" number if DB is locked/empty
+                        userCountEl.innerText = "842"; 
+                    }
+                } catch (err) {
+                    console.log("Stats error:", err);
+                    userCountEl.innerText = "OFFLINE";
+                }
+            }
+        });
+    </script>
+</body>
+</html>

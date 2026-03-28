@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - Command Deck</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="anime-db.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { action: { DEFAULT: '#ff4d00', dark: '#cc3d00' } },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #050505; color: #f1f1f1; overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; background-image: linear-gradient(rgba(255,77,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,77,0,0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #333; } ::-webkit-scrollbar-thumb:hover { background: #ff4d00; }
+        .sidebar-link { transition: all 0.2s ease; border-left: 3px solid transparent; cursor: pointer; }
+        .sidebar-link:hover, .sidebar-link.active { background: linear-gradient(90deg, rgba(255,77,0,0.1), transparent); padding-left: 1.5rem; color: white; border-left-color: #ff4d00; }
+        
+        .tech-card { background: rgba(15,15,15,0.95); border: 1px solid rgba(255,255,255,0.08); position: relative; transition: 0.1s; overflow: hidden; }
+        .tech-card:hover { border-color: var(--accent-color, #ff4d00); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .tech-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #333; transition: 0.3s; }
+        .tech-card:hover::before { background: var(--accent-color, #ff4d00); }
+
+        .badge-slot { width: 45px; height: 45px; background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; transition: 0.1s; position: relative; cursor: pointer; }
+        .badge-slot.equipped { border: 1px solid var(--accent-color, #ff4d00); background: rgba(255,255,255,0.05); }
+        .badge-slot:hover { border-color: var(--accent-color, #ff4d00); }
+        .badge-tooltip { position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: var(--accent-color, #ff4d00); color: black; font-size: 9px; font-weight: bold; padding: 2px 6px; opacity: 0; pointer-events: none; transition: 0.2s; white-space: nowrap; z-index: 20; text-transform: uppercase; }
+        .badge-slot:hover .badge-tooltip { opacity: 1; }
+
+        .modal-bg { background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+        
+        .hex-avatar { width: 60px; height: 60px; background: #111; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; position: relative; border: 2px solid #ff4d00; }
+        .hex-avatar::before { content: ''; position: absolute; inset: 0; background: linear-gradient(45deg, transparent, rgba(255,77,0,0.2)); z-index: 1; }
+        
+        button:active, .tech-card:active, .badge-slot:active, .sidebar-link:active, a:active { transform: scale(0.98); filter: brightness(0.9); }
+        .reveal-on-scroll { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+
+        .profile-badge-slot { width: 30px; height: 30px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; background: rgba(0,0,0,0.4); }
+        .profile-badge-slot:hover { border-color: var(--accent-color, #ff4d00); background: rgba(255,255,255,0.05); }
+
+        /* Mobile Sidebar Overlay */
+        #mobile-overlay { display: none; }
+        #mobile-overlay.active { display: block; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white">
+
+    <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+    <audio id="hoverSound" src="hover.mp3" preload="auto"></audio>
+    <audio id="successSound" src="success.mp3" preload="auto"></audio>
+
+    <div id="notification-area" class="fixed top-24 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <div id="mobile-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/80 z-[55] lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-gray-800 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMobileMenu()" class="lg:hidden text-white text-xl hover:text-action transition-colors">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <div class="hidden md:block text-right"><div class="text-[10px] text-action font-mono animate-pulse-slow">● LIVE DATA FEED</div><div id="clock" class="text-xs font-mono text-gray-500">00:00:00</div></div>
+                <button id="logout-btn" class="border border-red-600/50 text-red-500 font-bold py-1 px-4 text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition">Disconnect</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-[72px] flex-1">
+        
+        <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-[60] w-64 bg-black border-r border-gray-800 p-6 flex flex-col transform -translate-x-full transition-transform duration-300 lg:translate-x-0 lg:static lg:flex lg:bg-black/80 lg:z-40 h-full">
+            
+            <button onclick="toggleMobileMenu()" class="absolute top-4 right-4 text-gray-500 lg:hidden hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+
+            <div class="flex items-center gap-4 mb-8 pb-6 border-b border-white/5 mt-8 lg:mt-0">
+                <div class="relative"><div class="hex-avatar"><i class="fas fa-user-secret text-2xl text-white z-10"></i></div><div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-black z-20 animate-pulse"></div></div>
+                <div class="flex flex-col"><h2 id="sidebar-name" class="font-bold text-sm text-white tracking-widest uppercase leading-tight mb-1">LOADING...</h2><div class="flex items-center gap-2"><span class="text-[9px] bg-action/20 text-action px-1.5 py-0.5 rounded font-bold">LVL <span id="sidebar-lvl">--</span></span><span class="text-[9px] text-gray-500 font-mono">OP</span></div></div>
+            </div>
+            <nav class="space-y-1 flex-1 overflow-y-auto">
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 pl-4">Main Deck</div>
+                <a href="dashboard.html" class="sidebar-link active flex items-center px-4 py-3 text-gray-300"><i class="fas fa-id-card w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Identity</span></a>
+                <a href="missions.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-list-check w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Mission Logs</span></a>
+                <a href="network.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-globe w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Global Network</span></a>
+
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 mt-6 pl-4">Intel</div>
+                <a href="quotes.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-bolt w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Tactical Morale</span></a>
+
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 mt-6 pl-4">Utilities</div>
+                <a onclick="openModal('armoryModal'); toggleMobileMenu()" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-shop w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">The Armory</span></a>
+                <a onclick="triggerRoulette(); toggleMobileMenu()" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-dice w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Roulette</span></a>
+                <a onclick="openModal('badgesModal'); toggleMobileMenu()" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-medal w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">All Badges</span></a>
+                <a href="account_settings.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-cog w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">System Config</span></a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 bg-transparent lg:ml-0 flex flex-col relative z-0 min-h-screen">
+            <div class="p-6 lg:p-10 flex-grow max-w-7xl mx-auto w-full">
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-8">
+                        <div class="tech-card flex flex-col md:flex-row min-h-[300px] reveal-on-scroll">
+                            <div class="w-full md:w-1/3 bg-black/40 border-r border-white/10 p-8 flex flex-col items-center justify-center text-center relative">
+                                <div class="relative w-32 h-32 mb-4">
+                                    <div class="absolute inset-0 border-2 border-dashed border-gray-700 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                                    <div class="absolute inset-2 rounded-full border-2 border-action bg-black flex items-center justify-center"><i class="fas fa-user-secret text-6xl text-gray-700"></i></div>
+                                    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-3 bg-black border border-action text-action text-xs font-bold px-3 py-1 uppercase">LVL. <span id="current-level">1</span></div>
+                                </div>
+                                <h2 id="card-username" class="text-xl font-bebas text-white tracking-widest">LOADING...</h2>
+                                <div class="w-full px-2 mt-4"><div class="flex justify-between text-[9px] text-gray-400 font-mono mb-1"><span>XP: <span id="current-xp">0</span></span><span>NEXT: <span id="next-level-xp">1000</span></span></div><div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden border border-white/5"><div id="xp-bar" class="bg-action h-full" style="width: 0%"></div></div><p class="text-[9px] text-gray-600 mt-2 font-mono">Daily Cap: <span id="daily-xp">0</span> / 5000</p></div>
+                            </div>
+                            <div class="flex-1 p-6 flex flex-col">
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div><p class="text-[9px] text-gray-500 uppercase font-bold">Codename</p><p id="user-nick" class="text-sm text-white font-mono">---</p></div>
+                                    <div><p class="text-[9px] text-gray-500 uppercase font-bold">Clan</p><p id="user-clan" class="text-sm text-action font-bold font-mono">---</p></div>
+                                    <div><p class="text-[9px] text-gray-500 uppercase font-bold">Specialty</p><p id="user-char" class="text-sm text-white font-mono">---</p></div>
+                                    <div><p class="text-[9px] text-gray-500 uppercase font-bold">Deployed</p><p id="user-date" class="text-sm text-white font-mono">---</p></div>
+                                </div>
+                                <div class="mt-auto border-t border-white/10 pt-4">
+                                    <p class="text-[9px] text-gray-500 uppercase font-bold mb-2">Featured Badges (5)</p>
+                                    <div class="flex gap-2">
+                                        <div onclick="openModal('badgesModal')" class="profile-badge-slot" title="Add Badge"><i class="fas fa-plus text-[10px] text-gray-600"></i></div>
+                                        <div onclick="openModal('badgesModal')" class="profile-badge-slot" title="Add Badge"><i class="fas fa-plus text-[10px] text-gray-600"></i></div>
+                                        <div onclick="openModal('badgesModal')" class="profile-badge-slot" title="Add Badge"><i class="fas fa-plus text-[10px] text-gray-600"></i></div>
+                                        <div onclick="openModal('badgesModal')" class="profile-badge-slot" title="Add Badge"><i class="fas fa-plus text-[10px] text-gray-600"></i></div>
+                                        <div onclick="openModal('badgesModal')" class="profile-badge-slot" title="Add Badge"><i class="fas fa-plus text-[10px] text-gray-600"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="reveal-on-scroll">
+                            <div class="flex justify-between items-end mb-4"><h2 class="text-2xl font-bebas tracking-wider text-white border-l-4 border-action pl-3">Daily <span class="text-action">Ops</span></h2><div class="text-[10px] text-gray-500 font-mono">RESET: <span id="quest-timer">00:00:00</span></div></div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Intel Gathering</h3><p class="text-[9px] text-gray-500 font-mono">Check Leaderboard</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+150 XP</span><button onclick="executeQuest(1)" id="quest-btn-1" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Field Work</h3><p class="text-[9px] text-gray-500 font-mono">Update 1 Mission Log</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+300 XP</span><button onclick="executeQuest(2)" id="quest-btn-2" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Clan Loyalty</h3><p class="text-[9px] text-gray-500 font-mono">Visit Clan HQ</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+500 XP</span><button onclick="executeQuest(3)" id="quest-btn-3" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Combat Sim</h3><p class="text-[9px] text-gray-500 font-mono">Run Battle Simulation</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+600 XP</span><button onclick="executeQuest(4)" id="quest-btn-4" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Decode Signal</h3><p class="text-[9px] text-gray-500 font-mono">Decrypt Enemy Comms</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+400 XP</span><button onclick="executeQuest(5)" id="quest-btn-5" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Supply Run</h3><p class="text-[9px] text-gray-500 font-mono">Check The Armory</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+350 XP</span><button onclick="executeQuest(6)" id="quest-btn-6" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+
+                                <div class="tech-card p-4 flex flex-col justify-between h-28 border-l-2 border-l-red-600"><div><h3 class="font-bold text-white text-xs uppercase">Raid Boss</h3><p class="text-[9px] text-gray-500 font-mono">Engage Titan Class</p></div><div class="flex justify-between items-end"><span class="text-red-500 font-bold text-[10px]">+1000 XP</span><button onclick="executeQuest(7)" id="quest-btn-7" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Tactical Review</h3><p class="text-[9px] text-gray-500 font-mono">Check Profile Config</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+800 XP</span><button onclick="executeQuest(8)" id="quest-btn-8" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                                <div class="tech-card p-4 flex flex-col justify-between h-28"><div><h3 class="font-bold text-white text-xs uppercase">Share Intel</h3><p class="text-[9px] text-gray-500 font-mono">Sync Mission Data</p></div><div class="flex justify-between items-end"><span class="text-action font-bold text-[10px]">+900 XP</span><button onclick="executeQuest(9)" id="quest-btn-9" class="border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors">Execute</button></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-8 reveal-on-scroll stagger-1">
+                        <div class="tech-card p-5 h-64 flex flex-col">
+                            <div class="flex justify-between items-center border-b border-white/10 pb-2 mb-3">
+                                <h3 class="text-sm font-bold text-white uppercase tracking-widest">Live <span class="text-action">Network</span></h3>
+                                <span class="text-[9px] text-red-500 animate-pulse font-bold">● REC</span>
+                            </div>
+                            <div id="activity-feed" class="flex-1 overflow-hidden font-mono text-[10px] text-gray-400 space-y-2 relative">
+                                <div class="feed-item"><span class="text-action">></span> <span class="text-gray-500">Secure Connection Established...</span></div>
+                            </div>
+                        </div>
+
+                        <div class="tech-card p-5">
+                            <h3 class="text-sm font-bold text-white uppercase tracking-widest mb-4 border-b border-white/10 pb-2">Active <span class="text-action">Insignia</span></h3>
+                            <div class="grid grid-cols-4 gap-2">
+                                <div class="badge-slot equipped" title="Recruit"><div class="badge-tooltip">Recruit</div><i class="fas fa-certificate text-white text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                                <div class="badge-slot" title="Locked"><i class="fas fa-lock text-gray-600 text-xs"></i></div>
+                            </div>
+                            <button onclick="openModal('badgesModal')" class="w-full mt-4 text-[9px] uppercase tracking-widest text-gray-500 hover:text-white transition">View All Badges <i class="fas fa-arrow-right ml-1"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+                <div class="container mx-auto px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                        <div class="space-y-6">
+                            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                            <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                                <li><a href="#Trending" class="hover:text-action transition-colors">Trending Now</a></li>
+                                <li><a href="#genres" class="hover:text-action transition-colors">Browse Genres</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                            <form class="relative mt-4">
+                                <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                                <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                        <p>&copy; 2026 Anime Universe.</p>
+                        <div class="flex space-x-6">
+                            <span>System Status: <span class="text-action">Operational</span></span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <div id="armoryModal" class="fixed inset-0 modal-bg hidden z-[80] flex items-center justify-center p-4"><div class="bg-[#090909] border border-white/10 w-full max-w-lg p-8 relative"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bebas text-white">The <span class="text-action">Armory</span></h2><button onclick="closeModal('armoryModal')" class="text-gray-500 hover:text-white"><i class="fas fa-times"></i></button></div><p class="text-xs text-gray-400 mb-4 font-mono">BALANCE: <span class="text-white font-bold" id="armory-xp">0</span> XP</p><div class="grid grid-cols-2 gap-4"><div class="border border-white/10 p-3 hover:border-blue-500 cursor-pointer group" onclick="buyColor('#3b82f6', 1000)"><div class="h-8 bg-blue-500 mb-2"></div><div class="flex justify-between text-xs"><span class="text-white">Neon Blue Theme</span><span class="text-gray-500 group-hover:text-blue-500">1000 XP</span></div></div><div class="border border-white/10 p-3 hover:border-green-500 cursor-pointer group" onclick="buyColor('#22c55e', 2500)"><div class="h-8 bg-green-500 mb-2"></div><div class="flex justify-between text-xs"><span class="text-white">Cyber Green Theme</span><span class="text-gray-500 group-hover:text-green-500">2500 XP</span></div></div><div class="border border-white/10 p-3 hover:border-purple-500 cursor-pointer group" onclick="buyColor('#a855f7', 5000)"><div class="h-8 bg-purple-500 mb-2"></div><div class="flex justify-between text-xs"><span class="text-white">Void Purple Theme</span><span class="text-gray-500 group-hover:text-purple-500">5000 XP</span></div></div><div class="border border-white/10 p-3 hover:border-action cursor-pointer group" onclick="buyColor('#ff4d00', 0)"><div class="h-8 bg-action mb-2"></div><div class="flex justify-between text-xs"><span class="text-white">Standard Orange</span><span class="text-gray-500 group-hover:text-action">FREE</span></div></div></div></div></div>
+    <div id="rouletteModal" class="fixed inset-0 modal-bg hidden z-[80] flex items-center justify-center p-4"><div class="bg-[#090909] border border-white/10 w-full max-w-sm p-8 text-center relative"><h2 class="text-xl font-bebas text-white mb-4">Mission <span class="text-action">Roulette</span></h2><div id="roulette-spinner" class="text-4xl text-white font-bold mb-6 min-h-[50px] flex items-center justify-center">...</div><button onclick="window.location.href='roulette.html'" class="border border-white/20 text-gray-400 py-2 px-6 text-xs hover:text-white uppercase">Accept Mission</button></div></div>
+    <div id="leaderboardModal" class="fixed inset-0 modal-bg hidden z-[70] flex items-center justify-center p-4"><div class="bg-[#090909] border border-white/10 w-full max-w-2xl p-8 relative"><div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h2 class="text-3xl font-bebas text-white italic">Global <span class="text-action">Rankings</span></h2><button onclick="closeModal('leaderboardModal')" class="text-gray-500 hover:text-white"><i class="fas fa-times text-xl"></i></button></div><table class="w-full text-left text-sm font-mono"><thead class="text-[10px] uppercase text-gray-500"><tr><th class="p-3">Rank</th><th class="p-3">Operative</th><th class="p-3">Clan</th><th class="p-3 text-right">XP</th></tr></thead><tbody class="text-gray-300" id="lb-body"></tbody></table></div></div>
+    <div id="clanModal" class="fixed inset-0 modal-bg hidden z-[70] flex items-center justify-center p-4"><div class="bg-[#090909] border border-white/10 w-full max-w-lg p-0 relative"><div class="h-32 bg-gray-800 relative flex items-end p-6"><h2 class="text-3xl font-bebas text-white relative z-10" id="clan-modal-name">CLAN</h2><button onclick="closeModal('clanModal')" class="absolute top-4 right-4 text-white z-20"><i class="fas fa-times"></i></button></div><div class="p-8"><div class="grid grid-cols-3 gap-4 mb-8 text-center"><div class="border border-white/10 p-2"><div class="text-[10px] text-gray-500 font-bold">Members</div><div class="text-xl text-white font-mono">1</div></div><div class="border border-white/10 p-2"><div class="text-[10px] text-gray-500 font-bold">Total XP</div><div class="text-xl text-action font-mono" id="clan-total-xp">--</div></div><div class="border border-white/10 p-2"><div class="text-[10px] text-gray-500 font-bold">Rank</div><div class="text-xl text-white font-mono">#1</div></div></div></div></div></div>
+    <div id="badgesModal" class="fixed inset-0 modal-bg hidden z-[70] flex items-center justify-center p-4"><div class="bg-[#090909] border border-white/10 w-full max-w-lg p-8 relative"><h2 class="text-2xl font-bebas text-white mb-4">Operative <span class="text-action">Badges</span></h2><button onclick="closeModal('badgesModal')" class="absolute top-4 right-4 text-gray-500"><i class="fas fa-times"></i></button><div class="grid grid-cols-4 gap-4" id="all-badges-grid"></div></div></div>
+
+    <script>
+        // === GLOBAL VARIABLES & FUNCTIONS ===
+        let currentUser = {}; 
+
+        // 0. MOBILE MENU TOGGLE
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('main-sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full'); // Show
+                overlay.classList.add('active');
+            } else {
+                sidebar.classList.add('-translate-x-full'); // Hide
+                overlay.classList.remove('active');
+            }
+        }
+
+        // 1. SOUND SYSTEM
+        function playSfx(type) {
+            const click = document.getElementById('clickSound');
+            const hover = document.getElementById('hoverSound');
+            const success = document.getElementById('successSound');
+            try {
+                if(type === 'click' && click) { click.currentTime = 0; click.play().catch(e => {}); }
+                if(type === 'hover' && hover) { hover.currentTime = 0; hover.play().catch(e => {}); } 
+                if(type === 'success' && success) { success.currentTime = 0; success.play().catch(e => {}); }
+            } catch(e) { console.log('Audio error:', e); }
+        }
+
+        // 2. MODAL LOGIC
+        function openModal(id) {
+            playSfx('click');
+            const modal = document.getElementById(id);
+            if(modal) {
+                modal.classList.remove('hidden');
+                
+                if (id === 'leaderboardModal') loadLiveLeaderboard(); 
+                if (id === 'clanModal') setTimeout(() => awardQuest(3), 1000);
+                if (id === 'armoryModal') setTimeout(() => awardQuest(6), 500); // Trigger Supply Run
+            }
+        }
+
+        function closeModal(id) { 
+            playSfx('click');
+            const modal = document.getElementById(id);
+            if(modal) modal.classList.add('hidden'); 
+        }
+
+        // 3. LIVE LEADERBOARD
+        async function loadLiveLeaderboard() {
+            const lbBody = document.getElementById('lb-body');
+            lbBody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-xs text-gray-500 animate-pulse">Scanning Global Network...</td></tr>';
+            
+            if(typeof db !== 'undefined') {
+                const { data, error } = await db
+                    .from('users')
+                    .select('username, clan, total_xp')
+                    .order('total_xp', { ascending: false })
+                    .limit(5);
+
+                if(data) {
+                    lbBody.innerHTML = '';
+                    data.forEach((user, index) => {
+                        const isMe = user.username === currentUser.username;
+                        const rowClass = isMe ? 'bg-white/10' : '';
+                        const icon = index === 0 ? '<i class="fas fa-crown text-yellow-500"></i>' : `<span class="text-gray-500">#${index+1}</span>`;
+                        
+                        lbBody.innerHTML += `
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition ${rowClass}">
+                            <td class="p-3 text-action font-bold">${icon}</td>
+                            <td class="p-3 font-bold text-white flex items-center gap-2">${user.username}</td>
+                            <td class="p-3 text-gray-400 text-xs uppercase">${user.clan || 'Freelancer'}</td>
+                            <td class="p-3 text-right font-mono text-action">${Math.floor(user.total_xp).toLocaleString()} XP</td>
+                        </tr>`;
+                    });
+                    setTimeout(() => awardQuest(1), 1000); // Trigger Intel Gathering
+                }
+            }
+        }
+
+        // 4. QUEST SYSTEM (PERSISTENT & LIVE)
+        async function executeQuest(id) {
+            // Instant check for existing completion
+            const dailyData = currentUser.daily_metadata || { completed: [] };
+            if(dailyData.completed.includes(id)) return; 
+            
+            playSfx('click');
+            
+            // Logic for specific quests
+            if (id === 1) openModal('leaderboardModal'); 
+            else if (id === 2) await verifyMissionLog(); 
+            else if (id === 3) openModal('clanModal');
+            else if (id === 4) simulateProcess(id, "RUNNING BATTLE SIM...", 2000);
+            else if (id === 5) simulateProcess(id, "DECRYPTING COMMS...", 1500);
+            else if (id === 6) openModal('armoryModal');
+            else if (id === 7) simulateProcess(id, "ENGAGING TITAN...", 3000);
+            else if (id === 8) { window.location.href = 'account_settings.html'; setTimeout(() => awardQuest(8), 1000); }
+            else if (id === 9) simulateProcess(id, "UPLOADING DATA...", 1000);
+        }
+
+        function simulateProcess(id, text, time) {
+            const btn = document.getElementById(`quest-btn-${id}`);
+            const originalText = btn.textContent;
+            btn.textContent = text;
+            btn.classList.add('animate-pulse', 'text-action');
+            setTimeout(() => {
+                awardQuest(id);
+            }, time);
+        }
+
+        async function verifyMissionLog() {
+            if(typeof db !== 'undefined' && currentUser.email) {
+                const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+                const { data } = await db.from('missions').select('id').eq('email', currentUser.email).gte('created_at', todayStart.toISOString()).limit(1);
+                if (data && data.length > 0) await awardQuest(2);
+                else { alert("No field work detected today. Add a mission log first!"); window.location.href = 'missions.html'; }
+            }
+        }
+
+        async function awardQuest(id) {
+            if(!currentUser.daily_metadata) currentUser.daily_metadata = { date: new Date().toDateString(), completed: [] };
+            
+            // If already completed, stop here
+            if(currentUser.daily_metadata.completed.includes(id)) return;
+
+            const rewards = {
+                1:150, 2:300, 3:500,  // Original
+                4:600, 5:400, 6:350,  // Tier 2
+                7:1000, 8:800, 9:900  // Tier 3
+            };
+            const titles = {
+                1: "INTEL GATHERED", 2: "FIELD WORK DONE", 3: "CLAN LOYALTY",
+                4: "SIMULATION COMPLETE", 5: "DECRYPTION SUCCESS", 6: "RESUPPLY DONE",
+                7: "TITAN DEFEATED", 8: "REVIEW COMPLETE", 9: "DATA SYNCED"
+            };
+            
+            // 1. Update State
+            currentUser.total_xp = (currentUser.total_xp || 0) + rewards[id];
+            currentUser.daily_metadata.completed.push(id);
+            
+            // 2. Level Up Logic
+            const XP_FACTOR = 745;
+            const newLevel = Math.floor(Math.sqrt(currentUser.total_xp / XP_FACTOR)) + 1;
+            if(newLevel > (currentUser.level || 1)) {
+                currentUser.level = newLevel;
+                showNotification(`PROMOTION: LVL ${newLevel}`);
+                playSfx('success');
+            }
+
+            // 3. Persistent Save
+            localStorage.setItem('currentUser', JSON.stringify(currentUser)); // Immediate local save
+            
+            if(typeof db !== 'undefined' && currentUser.email) {
+                await db.from('users').update({ 
+                    total_xp: currentUser.total_xp,
+                    level: currentUser.level,
+                    daily_metadata: currentUser.daily_metadata 
+                }).eq('email', currentUser.email);
+            }
+            
+            // 4. Update UI
+            playSfx('success');
+            updateQuestButton(id);
+            renderDashboard();
+            showNotification(`${titles[id]} (+${rewards[id]} XP)`);
+            addToFeed(`${currentUser.username || 'OPERATIVE'} COMPLETED: ${titles[id]}`);
+        }
+        
+        // 5. DAILY RESET CHECK
+        async function checkDailyReset() {
+            const today = new Date().toDateString();
+            if(!currentUser.daily_metadata) currentUser.daily_metadata = { date: today, completed: [] };
+
+            if (currentUser.daily_metadata.date !== today) {
+                console.log("System: Daily Ops Reset Triggered");
+                currentUser.daily_metadata = { date: today, completed: [] };
+                
+                if(typeof db !== 'undefined' && currentUser.email) {
+                    await db.from('users').update({ daily_metadata: currentUser.daily_metadata }).eq('email', currentUser.email);
+                }
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Reset Buttons visually
+                for(let i=1; i<=9; i++) {
+                    const btn = document.getElementById(`quest-btn-${i}`);
+                    if(btn) {
+                        btn.textContent = "EXECUTE";
+                        btn.className = "border border-white/20 text-[9px] px-2 py-1 text-gray-400 hover:text-white uppercase transition-colors";
+                        btn.setAttribute('onclick', `executeQuest(${i})`);
+                    }
+                }
+            } else {
+                // IMPORTANT: Restore "Completed" buttons on reload
+                currentUser.daily_metadata.completed.forEach(id => updateQuestButton(id));
+            }
+        }
+
+        function updateQuestButton(id) {
+            const btn = document.getElementById(`quest-btn-${id}`);
+            if(btn) { 
+                btn.textContent = "COMPLETED"; 
+                btn.className = "text-green-500 border border-green-500 text-[9px] px-2 py-1 cursor-default bg-green-500/10 font-bold"; 
+                btn.removeAttribute('onclick');
+            }
+        }
+
+        // 6. LIVE FEED UPDATER
+        function addToFeed(msg) {
+            const feed = document.getElementById('activity-feed');
+            const time = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit'});
+            
+            const item = document.createElement('div');
+            item.className = 'feed-item animate-pulse-slow border-l-2 border-action pl-2 mb-2';
+            item.innerHTML = `<span class="text-gray-600 font-mono">[${time}]</span> <span class="text-white text-[9px] uppercase">${msg}</span>`;
+            
+            feed.prepend(item);
+            if(feed.children.length > 8) feed.lastElementChild.remove();
+        }
+
+        // 7. GENERAL UI
+        function showNotification(msg) {
+            const container = document.getElementById('notification-area');
+            const toast = document.createElement('div');
+            toast.className = 'bg-black/90 border border-white/10 border-l-4 border-action text-white p-4 text-xs font-mono shadow-2xl flex items-center gap-3 transform translate-x-full transition-transform duration-300';
+            toast.innerHTML = `<i class="fas fa-check-circle text-action"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full'));
+            setTimeout(() => { toast.classList.add('translate-x-full'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function triggerRoulette() {
+            playSfx('click');
+            const modal = document.getElementById('rouletteModal');
+            modal.classList.remove('hidden');
+            const spinner = document.getElementById('roulette-spinner');
+            const animes = ["Naruto", "Bleach", "One Piece", "HxH", "Monster", "Berserk"];
+            let i = 0; 
+            const interval = setInterval(() => { 
+                spinner.textContent = animes[Math.floor(Math.random() * animes.length)]; 
+                playSfx('hover'); i++; 
+                if(i > 15) { clearInterval(interval); spinner.classList.add('text-action'); } 
+            }, 100);
+        }
+
+        async function buyColor(color, cost) {
+            playSfx('click');
+            if((currentUser.total_xp || 0) >= cost) {
+                if(confirm(`Purchase Theme for ${cost} XP?`)) {
+                    currentUser.total_xp -= cost; 
+                    currentUser.theme = color; 
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    if(typeof db !== 'undefined' && currentUser.email) {
+                        await db.from('users').update({ total_xp: currentUser.total_xp, theme: currentUser.theme }).eq('email', currentUser.email);
+                    }
+                    renderDashboard(); showNotification("THEME EQUIPPED");
+                }
+            } else { alert("Insufficient XP"); }
+        }
+
+        function renderDashboard() {
+            if(currentUser.theme) document.documentElement.style.setProperty('--accent-color', currentUser.theme);
+            
+            // Fill User Data
+            document.getElementById('sidebar-name').textContent = (currentUser.nickname || currentUser.username || "USER").toUpperCase();
+            document.getElementById('sidebar-lvl').textContent = currentUser.level || 1;
+            document.getElementById('card-username').textContent = (currentUser.username || "USER").toUpperCase();
+            document.getElementById('user-nick').textContent = currentUser.nickname || "---";
+            document.getElementById('user-clan').textContent = (currentUser.clan || "Freelancer").toUpperCase();
+            document.getElementById('user-char').textContent = (currentUser.fav_char || "None").toUpperCase();
+            document.getElementById('user-date').textContent = new Date(currentUser.created_at || Date.now()).toLocaleDateString();
+
+            const totalXP = currentUser.total_xp || 0;
+            const lvl = currentUser.level || 1;
+            const XP_FACTOR = 745;
+            
+            document.getElementById('current-level').textContent = lvl;
+            document.getElementById('current-xp').textContent = Math.floor(totalXP).toLocaleString();
+            
+            let nextLvlXP = XP_FACTOR * Math.pow(lvl, 2);
+            document.getElementById('next-level-xp').textContent = Math.floor(nextLvlXP).toLocaleString();
+            
+            let prevLvlXP = XP_FACTOR * Math.pow(lvl - 1, 2);
+            let progress = ((totalXP - prevLvlXP) / (nextLvlXP - prevLvlXP)) * 100;
+            document.getElementById('xp-bar').style.width = Math.max(0, Math.min(100, progress)) + "%";
+            
+            // Calculate Daily XP Progress
+            const dailyData = currentUser.daily_metadata || { completed: [] };
+            const rewards = { 1:150, 2:300, 3:500, 4:600, 5:400, 6:350, 7:1000, 8:800, 9:900 };
+            let dailyTotal = 0;
+            dailyData.completed.forEach(id => { dailyTotal += (rewards[id] || 0); });
+            document.getElementById('daily-xp').textContent = dailyTotal;
+            document.getElementById('armory-xp').textContent = Math.floor(totalXP).toLocaleString();
+            document.getElementById('clan-total-xp').textContent = Math.floor(totalXP).toLocaleString();
+            document.getElementById('clan-modal-name').textContent = (currentUser.clan || "FREELANCER").toUpperCase();
+        }
+
+        async function fetchRecentMission() {
+            if(typeof db !== 'undefined' && currentUser.email) {
+                const { data } = await db.from('missions').select('title, ep').eq('email', currentUser.email).order('created_at', { ascending: false }).limit(1);
+                if (data && data.length > 0) addToFeed(`NEW INTEL: ${data[0].title} (EP ${data[0].ep})`);
+            }
+        }
+
+        // === BADGE SYSTEM ===
+        const BADGE_DB = [
+            { id: 'b_01', name: 'Recruit', icon: 'fa-id-badge', color: '#gray', desc: 'Welcome to the Universe.', condition: (u) => true },
+            { id: 'b_02', name: 'Operative', icon: 'fa-star', color: '#ff4d00', desc: 'Reach Level 5.', condition: (u) => (u.level || 1) >= 5 },
+            { id: 'b_03', name: 'Vanguard', icon: 'fa-shield-halved', color: '#3b82f6', desc: 'Reach Level 10.', condition: (u) => (u.level || 1) >= 10 },
+            { id: 'b_04', name: 'Warlord', icon: 'fa-crown', color: '#eab308', desc: 'Reach Level 25.', condition: (u) => (u.level || 1) >= 25 },
+            { id: 'b_05', name: 'Intel Broker', icon: 'fa-book-skull', color: '#a855f7', desc: 'Log 5 Missions.', condition: (u) => false }, // Needs DB count check
+            { id: 'b_06', name: 'Night Raid', icon: 'fa-moon', color: '#fff', desc: 'Active after midnight.', condition: (u) => { const h = new Date().getHours(); return h >= 0 && h < 5; } },
+            { id: 'b_07', name: 'Rich', icon: 'fa-gem', color: '#22c55e', desc: 'Hold 5000+ XP.', condition: (u) => (u.total_xp || 0) >= 5000 },
+            { id: 'b_08', name: 'Loyalist', icon: 'fa-medal', color: '#ef4444', desc: 'Complete 3 Daily Ops.', condition: (u) => (u.daily_metadata?.completed?.length || 0) >= 3 }
+        ];
+
+        function checkBadges() {
+            if (!currentUser.badges) currentUser.badges = ['b_01']; 
+            let newBadgeFound = false;
+
+            BADGE_DB.forEach(badge => {
+                if (!currentUser.badges.includes(badge.id) && badge.condition(currentUser)) {
+                    currentUser.badges.push(badge.id);
+                    newBadgeFound = true;
+                    showNotification(`BADGE UNLOCKED: ${badge.name}`);
+                    playSfx('success');
+                }
+            });
+
+            if (newBadgeFound) {
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                if (typeof db !== 'undefined' && currentUser.email) {
+                    db.from('users').update({ badges: currentUser.badges }).eq('email', currentUser.email).then();
+                }
+                renderBadges();
+            }
+        }
+
+        function renderBadges() {
+            const grid = document.getElementById('all-badges-grid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            
+            const sortedBadges = [...BADGE_DB].sort((a, b) => {
+                const hasA = (currentUser.badges || []).includes(a.id);
+                const hasB = (currentUser.badges || []).includes(b.id);
+                return hasB - hasA; 
+            });
+
+            sortedBadges.forEach(badge => {
+                const isOwned = (currentUser.badges || []).includes(badge.id);
+                const opacity = isOwned ? '1' : '0.3';
+                const border = isOwned ? `border-[${badge.color}]` : 'border-white/10';
+                const glow = isOwned ? `shadow-[0_0_15px_${badge.color}40]` : '';
+                const lockIcon = isOwned ? '' : '<i class="fas fa-lock absolute top-2 right-2 text-[10px] text-gray-500"></i>';
+
+                const html = `
+                    <div class="bg-black/50 border ${border} p-4 flex flex-col items-center justify-center relative group transition-all duration-300 ${glow}" style="opacity: ${opacity}">
+                        ${lockIcon}
+                        <div class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
+                            <i class="fas ${badge.icon} text-xl" style="color: ${badge.color}"></i>
+                        </div>
+                        <h4 class="text-white font-bebas tracking-wider text-sm">${badge.name}</h4>
+                        <p class="text-[9px] text-gray-500 font-mono text-center mt-1">${badge.desc}</p>
+                    </div>
+                `;
+                grid.innerHTML += html;
+            });
+
+            const profileSlots = document.querySelectorAll('.badge-slot');
+            const myBadges = currentUser.badges || [];
+            profileSlots.forEach((slot, index) => {
+                if (index < myBadges.length) {
+                    const badgeId = myBadges[index];
+                    const badgeData = BADGE_DB.find(b => b.id === badgeId);
+                    if (badgeData) {
+                        slot.innerHTML = `<div class="badge-tooltip">${badgeData.name}</div><i class="fas ${badgeData.icon} text-xs" style="color: ${badgeData.color}"></i>`;
+                        slot.classList.add('equipped');
+                        slot.title = badgeData.name;
+                    }
+                }
+            });
+        }
+
+        // === 8. INITIALIZATION ===
+        document.addEventListener('DOMContentLoaded', async function() {
+            const localUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!localUser || !localUser.email) { window.location.href = 'index.html'; return; }
+
+            // Priority: LocalStorage (Fast) -> then Update with DB (Slow)
+            currentUser = localUser;
+            renderDashboard();
+            checkBadges(); // NEW: Check badges on load
+            renderBadges(); // NEW: Render badges on load
+            checkDailyReset(); 
+
+            try {
+                if(typeof dbGetUser === 'function') {
+                    const dbData = await dbGetUser(localUser.email);
+                    if(dbData) {
+                        currentUser = dbData;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        checkDailyReset(); 
+                        renderDashboard();
+                        checkBadges(); // Check again with fresh data
+                        renderBadges();
+                    }
+                }
+                
+                if(currentUser.email && typeof db !== 'undefined') {
+                    db.channel('public:users:' + currentUser.email)
+                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `email=eq.${currentUser.email}` }, 
+                        (payload) => {
+                            currentUser = { ...currentUser, ...payload.new };
+                            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                            checkDailyReset();
+                            renderDashboard();
+                            checkBadges();
+                            renderBadges();
+                            showNotification("SYNC: DATA UPDATED REMOTELY");
+                        })
+                        .subscribe();
+                }
+
+                fetchRecentMission();
+                document.querySelectorAll('.reveal-on-scroll').forEach(el => el.classList.add('is-visible'));
+
+            } catch (err) { console.error("Load error", err); }
+
+            document.getElementById('logout-btn').addEventListener('click', () => { 
+                localStorage.removeItem('currentUser'); window.location.href = 'index.html'; 
+            });
+
+            setInterval(() => { 
+                const now = new Date(); 
+                document.getElementById('quest-timer').textContent = `${23-now.getHours()}h ${59-now.getMinutes()}m`; 
+                document.getElementById('clock').textContent = now.toLocaleTimeString(); 
+                if(now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() < 3) checkDailyReset();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

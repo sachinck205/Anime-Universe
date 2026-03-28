@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Universe - System Config</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="anime-db.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { action: { DEFAULT: '#ff4d00', dark: '#cc3d00' } },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: #050505; color: #f1f1f1; overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; background-image: linear-gradient(rgba(255,77,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,77,0,0.03) 1px, transparent 1px); background-size: 50px 50px; }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #333; } ::-webkit-scrollbar-thumb:hover { background: #ff4d00; }
+        .sidebar-link { transition: all 0.2s ease; border-left: 3px solid transparent; cursor: pointer; }
+        .sidebar-link:hover, .sidebar-link.active { background: linear-gradient(90deg, rgba(255,77,0,0.1), transparent); padding-left: 1.5rem; color: white; border-left-color: #ff4d00; }
+        
+        .tech-card { background: rgba(15,15,15,0.95); border: 1px solid rgba(255,255,255,0.08); position: relative; transition: 0.1s; overflow: hidden; }
+        .tech-card:hover { border-color: var(--accent-color, #ff4d00); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .tech-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #333; transition: 0.3s; }
+        .tech-card:hover::before { background: var(--accent-color, #ff4d00); }
+
+        .input-tech { width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.15); padding: 10px; font-family: 'Poppins', sans-serif; font-size: 0.85rem; color: white; transition: 0.3s; }
+        .input-tech:focus { border-color: #ff4d00; outline: none; box-shadow: 0 0 10px rgba(255,77,0,0.2); }
+
+        .hex-avatar { width: 60px; height: 60px; background: #111; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); display: flex; align-items: center; justify-content: center; position: relative; border: 2px solid #ff4d00; }
+        .hex-avatar::before { content: ''; position: absolute; inset: 0; background: linear-gradient(45deg, transparent, rgba(255,77,0,0.2)); z-index: 1; }
+
+        .modal-bg { background: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
+
+        /* ANIMATIONS */
+        button:active, .tech-card:active, .sidebar-link:active { transform: scale(0.98); filter: brightness(0.9); }
+        .reveal-on-scroll { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+        .stagger-1 { transition-delay: 100ms; }
+        .stagger-2 { transition-delay: 200ms; }
+        .stagger-3 { transition-delay: 300ms; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white">
+
+    <div id="notification-area" class="fixed top-24 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-gray-800 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">Universe</span></a>
+            <div class="flex items-center space-x-6">
+                <div class="hidden md:block text-right"><div class="text-[10px] text-action font-mono animate-pulse-slow">● SYSTEM CONFIG</div><div id="clock" class="text-xs font-mono text-gray-500">00:00:00</div></div>
+                <button id="logout-btn" class="border border-red-600/50 text-red-500 font-bold py-1 px-4 text-[10px] uppercase tracking-widest hover:bg-red-600 hover:text-white transition">Disconnect</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex pt-[72px] flex-1">
+        <aside class="w-64 bg-black/80 border-r border-gray-800 p-6 hidden lg:flex flex-col fixed h-full z-40">
+            <div class="flex items-center gap-4 mb-8 pb-6 border-b border-white/5">
+                <div class="relative"><div class="hex-avatar"><i class="fas fa-user-secret text-2xl text-white z-10"></i></div><div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-black z-20 animate-pulse"></div></div>
+                <div class="flex flex-col"><h2 id="sidebar-name" class="font-bold text-sm text-white tracking-widest uppercase leading-tight mb-1">LOADING...</h2><div class="flex items-center gap-2"><span class="text-[9px] bg-action/20 text-action px-1.5 py-0.5 rounded font-bold">LVL <span id="sidebar-lvl">1</span></span><span class="text-[9px] text-gray-500 font-mono">OP</span></div></div>
+            </div>
+            <nav class="space-y-1 flex-1">
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 pl-4">Main Deck</div>
+                <a href="dashboard.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-id-card w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Identity</span></a>
+                <a href="missions.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-list-check w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Mission Logs</span></a>
+                <a href="network.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-globe w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Global Network</span></a>
+                <a href="boss_raid.html" class="sidebar-link flex items-center px-4 py-3 text-red-500"><i class="fas fa-skull-crossbones w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Titan Raid</span></a>
+
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 mt-6 pl-4">Intel</div>
+                <a href="quotes.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-bolt w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Tactical Morale</span></a>
+
+                <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2 mt-6 pl-4">Utilities</div>
+                <a href="dashboard.html" onclick="alert('Access via Dashboard')" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-shop w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">The Armory</span></a>
+                <a href="roulette.html" class="sidebar-link flex items-center px-4 py-3 text-gray-300"><i class="fas fa-dice w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">Roulette</span></a>
+                <a href="account_settings.html" class="sidebar-link active flex items-center px-4 py-3 text-gray-300"><i class="fas fa-cog w-5 text-center text-xs"></i> <span class="text-xs uppercase tracking-wider font-bold ml-3">System Config</span></a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 bg-transparent lg:ml-64 flex flex-col relative z-0 min-h-screen">
+            <div class="p-6 lg:p-10 flex-grow max-w-4xl mx-auto w-full">
+                
+                <div class="mb-10 border-b border-white/10 pb-6 reveal-on-scroll">
+                    <h1 class="text-5xl font-bebas tracking-wider text-white italic">Protocol <span class="text-action">Settings</span></h1>
+                    <p class="text-gray-500 mt-2 font-mono text-xs uppercase tracking-widest">Manage credentials and operational parameters.</p>
+                </div>
+
+                <div class="space-y-8">
+                    
+                    <div class="tech-card p-8 reveal-on-scroll stagger-1">
+                        <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                            <h2 class="text-2xl font-bebas tracking-wider text-white">Identity <span class="text-action">Update</span></h2>
+                            <i class="fas fa-user-edit text-gray-600 text-xl"></i>
+                        </div>
+                        <form id="profileForm" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Operative Codename</label>
+                                    <input type="text" id="profile-nick" class="input-tech" placeholder="Enter new codename...">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Secure Comms (Email)</label>
+                                    <input type="email" id="profile-email" class="input-tech" placeholder="Enter email address...">
+                                </div>
+                            </div>
+                            <div class="pt-2 text-right">
+                                <button type="submit" id="save-profile-btn" class="bg-white/5 border border-action text-action font-bold py-3 px-8 text-xs uppercase tracking-widest hover:bg-action hover:text-black transition duration-300">
+                                    <i class="fas fa-save mr-2"></i> Save Protocols
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="tech-card p-8 reveal-on-scroll stagger-2">
+                        <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                            <h2 class="text-2xl font-bebas tracking-wider text-white">Security <span class="text-action">Clearance</span></h2>
+                            <i class="fas fa-shield-alt text-gray-600 text-xl"></i>
+                        </div>
+                        <form id="securityForm" class="space-y-6">
+                            <div>
+                                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Current Passcode</label>
+                                <input type="password" id="sec-current" class="input-tech" placeholder="••••••••">
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">New Passcode</label>
+                                    <input type="password" id="sec-new" class="input-tech" placeholder="••••••••">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-2">Confirm Passcode</label>
+                                    <input type="password" id="sec-confirm" class="input-tech" placeholder="••••••••">
+                                </div>
+                            </div>
+                            <div class="pt-2 text-right">
+                                <button type="submit" id="save-sec-btn" class="border border-white/20 text-white font-bold py-3 px-8 text-xs uppercase tracking-widest hover:bg-white hover:text-black transition duration-300">
+                                    <i class="fas fa-lock mr-2"></i> Update Encryption
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="tech-card p-8 border-red-900/30 reveal-on-scroll stagger-3">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bebas tracking-wider text-red-500">Danger <span class="text-white">Zone</span></h2>
+                            <i class="fas fa-exclamation-triangle text-red-500"></i>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-6 font-mono">WARNING: This action is irreversible. All mission logs, XP, and badges will be purged from the database.</p>
+                        <button onclick="openResetModal()" class="w-full border border-red-900 text-red-700 font-bold py-3 text-xs uppercase tracking-widest hover:bg-red-900 hover:text-white transition">
+                            Initiate Factory Reset
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="resetModal" class="fixed inset-0 modal-bg hidden z-[100] flex items-center justify-center p-4">
+                <div class="bg-black border-2 border-red-600 w-full max-w-sm p-8 text-center relative shadow-[0_0_50px_rgba(220,38,38,0.4)]">
+                    <div class="text-red-600 text-5xl mb-4 animate-pulse"><i class="fas fa-radiation"></i></div>
+                    <h2 class="text-2xl font-bebas text-white mb-2 tracking-widest">CRITICAL ALERT</h2>
+                    <p class="text-xs text-gray-400 mb-6 font-mono leading-relaxed">
+                        You are about to execute a complete system purge. This will wipe your account, XP, and all mission data from the central mainframe. 
+                        <br><br>
+                        <span class="text-red-500 font-bold">THIS CANNOT BE UNDONE.</span>
+                    </p>
+                    <div class="flex gap-3">
+                        <button onclick="closeResetModal()" class="flex-1 border border-white/20 text-white font-bold py-3 text-xs uppercase hover:bg-white hover:text-black transition">Abort</button>
+                        <button onclick="confirmFactoryReset()" id="reset-confirm-btn" class="flex-1 bg-red-600 text-white font-bold py-3 text-xs uppercase hover:bg-red-700 transition">EXECUTE</button>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+                <div class="container mx-auto px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                        <div class="space-y-6">
+                            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-action">UNIVERSE</span></a>
+                            <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">The ultimate tactical destination for anime operations.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Navigation</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="index.html#featured" class="hover:text-action transition-colors">Featured Series</a></li>
+                                <li><a href="index.html#Trending" class="hover:text-action transition-colors">Trending Now</a></li>
+                                <li><a href="index.html#genres" class="hover:text-action transition-colors">Browse Genres</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Support</h4>
+                            <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                                <li><a href="#" class="hover:text-action transition-colors">Help Center</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Terms</a></li>
+                                <li><a href="#" class="hover:text-action transition-colors">Privacy</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Intel Briefing</h4>
+                            <form class="relative mt-4">
+                                <input type="email" placeholder="EMAIL ADDRESS" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-action transition-colors font-mono">
+                                <button type="submit" class="absolute right-2 top-2 text-action hover:text-white"><i class="fas fa-arrow-right"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                        <p>&copy; 2026 Anime Universe.</p>
+                        <div class="flex space-x-6">
+                            <span>System Status: <span class="text-action">Operational</span></span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // === NOTIFICATION SYSTEM ===
+        function showNotification(msg, type='success') {
+            const container = document.getElementById('notification-area');
+            const toast = document.createElement('div');
+            const borderColor = type === 'error' ? 'border-red-500' : 'border-action';
+            const icon = type === 'error' ? 'fa-exclamation-circle text-red-500' : 'fa-check-circle text-action';
+            
+            toast.className = `bg-black/90 border border-white/10 border-l-4 ${borderColor} text-white p-4 text-xs font-mono shadow-2xl flex items-center gap-3 transform translate-x-full transition-transform duration-300`;
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full'));
+            
+            setTimeout(() => { toast.classList.add('translate-x-full'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. CHECK LOGIN
+            if (localStorage.getItem('isLoggedIn') !== 'true') window.location.href = 'login.html';
+            
+            let currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
+            
+            // 2. FILL UI
+            if(currentUser.theme) document.documentElement.style.setProperty('--accent-color', currentUser.theme);
+            document.getElementById('sidebar-name').textContent = (currentUser.nickname || currentUser.username || "USER").toUpperCase();
+            document.getElementById('sidebar-lvl').textContent = currentUser.level || 1;
+            document.getElementById('profile-nick').value = currentUser.nickname || "";
+            document.getElementById('profile-email').value = currentUser.email || "";
+
+
+            // === HANDLER 1: UPDATE PROFILE (DB) ===
+            document.getElementById('profileForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('save-profile-btn');
+                const newNick = document.getElementById('profile-nick').value.trim();
+                const newEmail = document.getElementById('profile-email').value.trim();
+                
+                if(!newNick || !newEmail) { showNotification("FIELDS CANNOT BE EMPTY", "error"); return; }
+
+                btn.innerText = "UPLOADING...";
+
+                try {
+                    // CALL SUPABASE
+                    if(typeof dbUpdateProfile === 'function') {
+                        await dbUpdateProfile(currentUser.email, newNick, newEmail);
+                    }
+                    
+                    // UPDATE LOCAL SESSION SO UI REFLECTS CHANGES INSTANTLY
+                    currentUser.nickname = newNick;
+                    currentUser.email = newEmail;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // UPDATE UI
+                    document.getElementById('sidebar-name').textContent = newNick.toUpperCase();
+                    showNotification("IDENTITY PROTOCOLS UPDATED");
+                } catch(err) {
+                    console.error(err);
+                    showNotification("DATABASE CONNECTION FAILED", "error");
+                } finally {
+                    btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Protocols';
+                }
+            });
+
+
+            // === HANDLER 2: UPDATE PASSWORD (DB) ===
+            document.getElementById('securityForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('save-sec-btn');
+                const currentPass = document.getElementById('sec-current').value;
+                const newPass = document.getElementById('sec-new').value;
+                const confirmPass = document.getElementById('sec-confirm').value;
+
+                if (!currentPass || !newPass || !confirmPass) { showNotification("ALL FIELDS REQUIRED", "error"); return; }
+                if (newPass !== confirmPass) { showNotification("PASSWORDS DO NOT MATCH", "error"); return; }
+                if (currentUser.password && currentPass !== currentUser.password) {
+                     // Note: Ideally, we verify old password on server, but for this level, check local
+                     showNotification("INVALID CURRENT PASSWORD", "error"); return; 
+                }
+
+                btn.innerText = "ENCRYPTING...";
+
+                try {
+                    // CALL SUPABASE
+                    if(typeof dbUpdatePassword === 'function') {
+                        await dbUpdatePassword(currentUser.email, newPass);
+                    }
+                    
+                    // Update Local Session
+                    currentUser.password = newPass; 
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    showNotification("ENCRYPTION KEY ROTATED");
+                    document.getElementById('securityForm').reset();
+                } catch(err) {
+                    console.error(err);
+                    showNotification("UPDATE FAILED", "error");
+                } finally {
+                    btn.innerHTML = '<i class="fas fa-lock mr-2"></i> Update Encryption';
+                }
+            });
+
+
+            // === HANDLER 3: FACTORY RESET (DB DELETE) ===
+            window.openResetModal = function() { document.getElementById('resetModal').classList.remove('hidden'); };
+            window.closeResetModal = function() { document.getElementById('resetModal').classList.add('hidden'); };
+
+            window.confirmFactoryReset = async function() {
+                const btn = document.getElementById('reset-confirm-btn');
+                btn.innerText = "PURGING...";
+                
+                try {
+                    // CALL SUPABASE
+                    if(typeof dbDeleteAccount === 'function') {
+                        await dbDeleteAccount(currentUser.email);
+                    }
+                    
+                    // Clear Local Storage
+                    localStorage.clear();
+                    
+                    window.location.href = 'index.html';
+                } catch(err) {
+                    console.error(err);
+                    showNotification("PURGE FAILED - SERVER ERROR", "error");
+                    btn.innerText = "EXECUTE";
+                }
+            };
+
+            document.getElementById('logout-btn').addEventListener('click', () => { 
+                localStorage.setItem('isLoggedIn', 'false'); 
+                window.location.href = 'index.html'; 
+            });
+            
+            setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
+            setTimeout(() => document.querySelectorAll('.reveal-on-scroll').forEach(el => el.classList.add('is-visible')), 100);
+        });
+    </script>
+</body>
+</html>

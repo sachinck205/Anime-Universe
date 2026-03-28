@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shonen Series - Anime Universe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        shonen: {
+                            DEFAULT: '#f59e0b', // Spirit Gold/Amber
+                            dark: '#b45309'
+                        },
+                    },
+                    animation: {
+                        'slow-zoom': 'zoom 20s infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-glow': 'pulse-glow 2s infinite',
+                    },
+                    keyframes: {
+                        zoom: {
+                            '0%': { transform: 'scale(1)' },
+                            '100%': { transform: 'scale(1.1)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --primary: #f59e0b;
+            --bg-dark: #050505;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            /* Comic/Manga Dot Pattern */
+            background-image: 
+                radial-gradient(var(--primary) 1px, transparent 1px),
+                radial-gradient(var(--primary) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            background-color: #050505; 
+            color: #f1f1f1;
+            overflow-x: hidden;
+            min-height: 100vh;
+            cursor: default; 
+        }
+        /* Fade the background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 5, 0.96);
+            z-index: -1;
+        }
+
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+
+        /* --- SHONEN THEME UTILITIES --- */
+        .shonen-skew {
+            transform: skew(-10deg);
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .shonen-skew:hover {
+            transform: skew(-10deg) scale(1.05);
+            background: var(--primary);
+            color: black;
+            box-shadow: 0 0 20px var(--primary);
+        }
+        .shonen-skew:active, .card:active, button:active, a:active {
+            transform: scale(0.98) skew(-10deg);
+            filter: brightness(0.9);
+        }
+
+        /* --- 3D TILT CARD STYLES --- */
+        .card {
+            transition: transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(20, 20, 20, 0.6);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
+            z-index: 10;
+        }
+        /* Burst effect on hover */
+        .card::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at center, var(--primary) 0%, transparent 70%);
+            opacity: 0; transition: 0.5s; pointer-events: none; mix-blend-mode: overlay;
+        }
+        .card:hover::after { opacity: 0.4; }
+
+        .card-img-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.9; pointer-events: none;
+        }
+        .card-content {
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem;
+            transform: translateY(20px) translateZ(20px); opacity: 0;
+            transition: all 0.3s ease-in-out; pointer-events: none;
+        }
+        .card:hover .card-content { transform: translateY(0) translateZ(20px); opacity: 1; }
+        .card-title {
+            position: absolute; bottom: 1.5rem; left: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-shadow: 0 4px 10px rgba(0,0,0,1); font-style: italic; transform: translateZ(30px);
+        }
+        .card:hover .card-title {
+            bottom: 140px; transform: scale(0.9) translateZ(30px);
+            transform-origin: left bottom; color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+        }
+
+        /* --- SCROLL REVEAL UTILITIES --- */
+        .reveal-on-scroll { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); }
+        .reveal-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+        .stagger-1 { transition-delay: 100ms; }
+        .stagger-2 { transition-delay: 200ms; }
+        .stagger-3 { transition-delay: 300ms; }
+
+        /* --- PARTICLES --- */
+        canvas#hero-particles {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+        }
+
+        /* --- MODAL --- */
+        #login-modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(5px);
+            z-index: 10000; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        #login-modal.active { display: flex; opacity: 1; }
+    </style>
+</head>
+<body class="bg-[#050505] text-white selection:bg-shonen selection:text-black antialiased">
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Shonen "Power Up" Sounds
+        function playSound(type = 'click') {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                // Punchy impact sound
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now); 
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'hover') {
+                // Rising energy sound
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now); 
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('button, a, .card, .shonen-skew').forEach(el => {
+                el.addEventListener('click', () => playSound('click'));
+                el.addEventListener('mouseenter', () => playSound('hover'));
+            });
+        });
+    </script>
+
+    <div id="login-modal">
+        <div class="bg-black border border-shonen p-10 max-w-sm w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.3)] relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-shonen to-red-600"></div>
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-shonen transition hover:rotate-90 duration-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="w-16 h-16 bg-shonen/10 flex items-center justify-center mx-auto mb-6 border border-shonen/50 rounded-full animate-pulse">
+                <i class="fas fa-fist-raised text-shonen text-2xl"></i>
+            </div>
+            <h3 class="text-3xl font-bebas tracking-widest mb-4 text-white italic">PROVE YOUR WORTH</h3>
+            <p class="text-gray-500 text-xs mb-8 uppercase tracking-widest">Register to enter the tournament.</p>
+            <div class="flex flex-col gap-4">
+                <a href="login.html" class="bg-shonen text-black font-black py-3 shonen-skew text-sm uppercase tracking-wider hover:bg-white hover:text-shonen transition">Enter Arena</a>
+                <a href="signup.html" class="bg-transparent text-shonen font-bold py-3 shonen-skew text-sm uppercase tracking-wider border border-white/20 hover:border-shonen transition">New Challenger</a>
+            </div>
+        </div>
+    </div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-white/10 bg-black/90 backdrop-blur-md" id="main-header">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center relative z-10">
+            <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">ANIME <span class="text-shonen">UNIVERSE</span></a>
+            
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="index.html" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Home</a>
+                <a href="#featured" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Heroes</a>
+                <a href="#list" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Roster</a>
+                <a href="#comms" class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 hover:text-white transition duration-300">Nakama</a>
+            </nav>
+
+            <div id="auth-buttons" class="flex items-center space-x-4">
+                <a id="login-btn" href="login.html" class="text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition">Login</a>
+                <a id="signup-btn" href="signup.html" class="bg-shonen text-black font-black py-2 px-6 shonen-skew text-xs uppercase tracking-widest hover:bg-white hover:text-black transition duration-300">Join</a>
+                <a id="profile-btn" href="dashboard.html" class="bg-white/10 text-white font-bold py-2 px-4 shonen-skew text-xs uppercase tracking-wider hover:bg-shonen hover:text-black transition hidden"><i class="fas fa-user-circle mr-2 transform skew-x-10"></i>Profile</a>
+                <a id="logout-btn" href="#" class="text-red-600 hover:text-red-400 font-bold text-xs uppercase tracking-wider hidden">Logout</a>
+            </div>
+            <button class="md:hidden text-white hover:text-shonen transition"><i class="fas fa-bars text-2xl"></i></button>
+        </div>
+    </header>
+
+    <section class="relative w-full h-[60vh] flex items-center justify-center overflow-hidden text-center bg-black">
+        <div class="absolute inset-0 bg-[url('https://images.alphacoders.com/605/605592.jpg')] bg-cover bg-fixed bg-center opacity-40 animate-slow-zoom"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/60 to-black/80"></div>
+        
+        <canvas id="hero-particles"></canvas>
+        
+        <div class="relative z-20 px-4">
+            <span class="block text-shonen font-bold tracking-[0.5em] uppercase text-sm mb-4 animate-pulse text-shadow-glow">Power Level: Rising</span>
+            <h1 class="reveal-on-scroll text-7xl md:text-9xl font-bebas text-white uppercase italic">Shonen <span class="text-shonen">Spirit</span></h1>
+            <div class="mt-8 flex justify-center gap-4 reveal-on-scroll stagger-1">
+                <div class="h-1 w-20 bg-shonen skew-x-[-20deg]"></div>
+                <div class="h-1 w-4 bg-shonen skew-x-[-20deg]"></div>
+                <div class="h-1 w-1 bg-shonen skew-x-[-20deg]"></div>
+            </div>
+        </div>
+    </section>
+
+    <main class="py-16 container mx-auto px-6 max-w-7xl relative z-10">
+        
+        <section class="reveal-on-scroll mb-24 relative">
+            <h2 class="text-5xl font-bebas tracking-widest text-white mb-2 italic">About the <span class="text-shonen">Genre</span></h2>
+            <div class="h-0.5 w-full bg-gradient-to-r from-shonen to-transparent mb-8"></div>
+            <p class="text-gray-400 text-xl leading-relaxed font-light italic border-l-4 border-shonen pl-6">
+                "Shonen" embodies the spirit of young men's manga: <strong class="text-white">Friendship, Effort, and Victory</strong>. These are tales of underdogs rising to become legends, protecting their comrades, and never giving up, no matter the odds.
+            </p>
+        </section>
+
+        <section id="featured" class="reveal-on-scroll mb-24">
+            <h2 class="text-4xl font-bebas tracking-widest text-white mb-2">The Big <span class="text-shonen">Legends</span></h2>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-8">Iconic Series</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('Naruto: Shippuden')">
+                    <img src="nmp.jpg" alt="Naruto" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas tracking-wider text-white">Naruto</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-xs mb-4">I'm going to be the Hokage! Believe it!</p>
+                        <span class="font-bold text-shonen uppercase tracking-widest text-[10px] border border-shonen px-3 py-1 hover:bg-shonen hover:text-black transition">Rasengan</span>
+                    </div>
+                </div>
+
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('One Piece')">
+                    <img src="Onepiece.jpg" alt="One Piece" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas tracking-wider text-white">One Piece</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-xs mb-4">I will become the King of the Pirates!</p>
+                        <span class="font-bold text-shonen uppercase tracking-widest text-[10px] border border-shonen px-3 py-1 hover:bg-shonen hover:text-black transition">Set Sail</span>
+                    </div>
+                </div>
+
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('Bleach')">
+                    <img src="Bleach.jpg" alt="Bleach" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas tracking-wider text-white">Bleach</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-xs mb-4">If I don't wield the sword, I can't protect you.</p>
+                        <span class="font-bold text-shonen uppercase tracking-widest text-[10px] border border-shonen px-3 py-1 hover:bg-shonen hover:text-black transition">Bankai</span>
+                    </div>
+                </div>
+
+                <div class="card tilt-card h-[400px] block group cursor-pointer" onclick="addToWatchlist('Hunter x Hunter')">
+                    <img src="hx.jpg" alt="HxH" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700">
+                    <div class="card-img-overlay"></div>
+                    <div class="card-title"><h3 class="text-3xl font-bebas tracking-wider text-white">Hunter x Hunter</h3></div>
+                    <div class="card-content">
+                        <p class="text-gray-300 text-xs mb-4">A journey to find his father and become a Hunter.</p>
+                        <span class="font-bold text-shonen uppercase tracking-widest text-[10px] border border-shonen px-3 py-1 hover:bg-shonen hover:text-black transition">Hunt</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="list" class="reveal-on-scroll mb-24">
+            <div class="flex items-end gap-4 mb-8">
+                <h2 class="text-4xl font-bebas tracking-widest text-white">Challenger <span class="text-shonen">Roster</span></h2>
+                <div class="flex-1 h-px bg-white/10 mb-2"></div>
+            </div>
+            <div id="top-50-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </section>
+
+        <section id="comms" class="reveal-on-scroll">
+            <h2 class="text-4xl font-bebas tracking-widest text-white mb-8 italic">Nakama <span class="text-shonen">Chat</span></h2>
+            <div class="bg-black/40 border border-white/10 p-8 relative">
+                <div class="absolute top-0 right-0 p-2 text-[10px] text-shonen font-bold tracking-widest bg-white/5 border-l border-b border-white/10">TRAINING GROUNDS</div>
+                <form id="comment-form" class="space-y-4">
+                    <textarea id="comment-text" placeholder="Declare your dream or challenge a rival..." class="w-full bg-black border border-white/10 p-4 text-sm text-white focus:outline-none focus:border-shonen h-32 font-mono"></textarea>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-shonen text-black font-black px-10 py-3 shonen-skew uppercase tracking-[0.2em] text-xs hover:bg-white transition">Shout It Out</button>
+                    </div>
+                </form>
+                <div id="comment-list" class="mt-10 space-y-4"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-black border-t border-white/10 pt-20 pb-10">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="space-y-6">
+                    <a href="index.html" class="text-3xl font-bebas tracking-wider text-white italic">Anime <span class="text-shonen">Universe</span></a>
+                    <p class="text-gray-500 text-xs leading-relaxed uppercase tracking-wide">Where legends are born and limits are broken.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Map</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="index.html" class="hover:text-shonen transition-colors">Village</a></li>
+                        <li><a href="#featured" class="hover:text-shonen transition-colors">Heroes</a></li>
+                        <li><a href="#list" class="hover:text-shonen transition-colors">Roster</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Guild</h4>
+                    <ul class="space-y-2 text-xs uppercase tracking-widest text-gray-500">
+                        <li><a href="#" class="hover:text-shonen transition-colors">Help</a></li>
+                        <li><a href="#" class="hover:text-shonen transition-colors">Rules</a></li>
+                        <li><a href="#" class="hover:text-shonen transition-colors">Privacy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bebas text-xl tracking-widest mb-6 uppercase">Scrolls</h4>
+                    <form class="relative mt-4">
+                        <input type="email" placeholder="YOUR SCROLL" class="w-full bg-white/5 border border-white/10 py-3 px-4 text-white text-xs focus:outline-none focus:border-shonen transition-colors font-mono">
+                        <button type="submit" class="absolute right-2 top-2 text-shonen hover:text-white"><i class="fas fa-fire"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-600 text-[10px] uppercase tracking-[0.2em] gap-4">
+                <p>&copy; 2026 Anime Universe.</p>
+                <div class="flex space-x-6">
+                    <span>Will of Fire: <span class="text-shonen">Burning</span></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            /* AUTH LOGIC */
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (isLoggedIn) {
+                document.getElementById('login-btn')?.classList.add('hidden');
+                document.getElementById('signup-btn')?.classList.add('hidden');
+                document.getElementById('profile-btn')?.classList.remove('hidden');
+                document.getElementById('logout-btn')?.classList.remove('hidden');
+            }
+
+            document.getElementById('logout-btn')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                localStorage.setItem('isLoggedIn', 'false');
+                window.location.reload(); 
+            });
+
+            /* LOGIN MODAL */
+            window.closeModal = function() {
+                const modal = document.getElementById('login-modal');
+                modal.classList.remove('active');
+                setTimeout(() => { modal.style.display = 'none'; }, 300);
+            };
+
+            /* POPULATE LIST WITH SHONEN TITLES */
+            const shonenAnime = [
+                "Dragon Ball Z", "One Piece", "Naruto Shippuden", "Bleach", 
+                "Hunter x Hunter", "My Hero Academia", "Demon Slayer", "Jujutsu Kaisen", 
+                "Black Clover", "Fairy Tail", "Fullmetal Alchemist: Brotherhood", "Gintama",
+                "JoJo's Bizarre Adventure", "Yu Yu Hakusho", "Haikyuu!!", "Dr. Stone", 
+                "Fire Force", "Soul Eater", "The Seven Deadly Sins", "Blue Exorcist"
+            ];
+
+            const listContainer = document.getElementById('top-50-list');
+            shonenAnime.forEach((name, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-white/5 p-4 flex justify-between items-center border border-white/5 hover:border-shonen transition group shonen-skew cursor-pointer";
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="text-shonen font-bebas text-xl opacity-50">${(index + 1).toString().padStart(2, '0')}</span>
+                        <h3 class="text-xs font-bold text-gray-300 group-hover:text-white transition uppercase tracking-wider">${name}</h3>
+                    </div>
+                    <button onclick="addToWatchlist('${name}')" class="text-[9px] font-black text-gray-600 hover:text-white transition uppercase tracking-widest"><i class="fas fa-plus"></i> EMBARK</button>
+                `;
+                // Add sound to dynamic elements
+                div.addEventListener('mouseenter', () => playSound('hover'));
+                div.addEventListener('click', (e) => { if(e.target.tagName !== 'BUTTON') playSound('click'); });
+                listContainer.appendChild(div);
+            });
+
+            /* COMMENT LOGIC */
+            const commentForm = document.getElementById('comment-form');
+            const commentList = document.getElementById('comment-list');
+
+            commentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!isLoggedIn) {
+                    const modal = document.getElementById('login-modal');
+                    modal.style.display = 'flex';
+                    setTimeout(() => modal.classList.add('active'), 10);
+                    return;
+                }
+                
+                const text = document.getElementById('comment-text').value.trim();
+                if (!text) return;
+
+                const newComment = document.createElement('div');
+                newComment.className = "bg-white/5 p-4 border-l-2 border-shonen animate-slide-in";
+                newComment.innerHTML = `<p class="text-shonen font-bold text-[10px] uppercase mb-1 tracking-widest">Ninja</p><p class="text-xs text-gray-400 font-mono">"${text}"</p>`;
+                
+                commentList.prepend(newComment);
+                document.getElementById('comment-text').value = "";
+                playSound('click');
+            });
+
+            /* ADD TO WATCHLIST FUNCTION */
+            window.addToWatchlist = (name) => {
+                if (!isLoggedIn) {
+                    const modal = document.getElementById('login-modal');
+                    modal.style.display = 'flex';
+                    setTimeout(() => modal.classList.add('active'), 10);
+                    return;
+                }
+                
+                let logs = JSON.parse(localStorage.getItem('missionLogs') || "[]");
+                
+                if (logs.some(log => log.title === name)) {
+                    alert("ALREADY IN ROSTER.");
+                    return;
+                }
+
+                logs.push({
+                    id: Date.now(),
+                    title: name,
+                    ep: 1,         
+                    season: 1,     
+                    status: 'Watching'
+                });
+
+                localStorage.setItem('missionLogs', JSON.stringify(logs));
+                window.location.href = 'missions.html';
+            };
+
+            /* 3D TILT EFFECT */
+            const tiltCards = document.querySelectorAll('.tilt-card');
+            tiltCards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = ((y - centerY) / centerY) * -10; 
+                    const rotateY = ((x - centerX) / centerX) * 10;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+                });
+            });
+
+            /* SCROLL REVEAL */
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('is-visible'); });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+
+            /* HEADER SCROLL */
+            const header = document.getElementById('main-header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('py-2');
+                    header.classList.remove('py-4');
+                } else {
+                    header.classList.add('py-4');
+                    header.classList.remove('py-2');
+                }
+            });
+
+            /* HERO PARTICLES (Golden Energy) */
+            const canvas = document.getElementById('hero-particles');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+            window.addEventListener('resize', resize); resize();
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2 + 0.5; 
+                    this.speedY = Math.random() * 2 + 0.5; // Fast rising energy
+                    // Gold/Yellow/Orange colors
+                    this.color = `rgba(245, ${158 + Math.random() * 50}, 11, ${Math.random() * 0.6 + 0.1})`;
+                }
+                update() {
+                    this.y -= this.speedY; // Rising up
+                    if (this.y < 0) { this.y = canvas.height; this.x = Math.random() * canvas.width; }
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+                    ctx.fill(); ctx.shadowBlur = 0;
+                }
+            }
+            for (let i = 0; i < 120; i++) particles.push(new Particle());
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => { p.update(); p.draw(); });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        });
+    </script>
+</body>
+</html>
